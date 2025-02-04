@@ -6,7 +6,7 @@ scripts: $(ipynb_files)
 # Format all notebooks
 format: $(ipynb_files)
 	@for f in $(ipynb_files); do echo "Formatting $$f"; \
-		jupytext --pipe "julia -e 'using JuliaFormatter'; format_file(ARGS[1]; margin=150)' {}" $$f; done
+		jupytext --pipe "julia -e 'using JuliaFormatter; format_file(ARGS[1]; margin=150)' {}" $$f; done
 
 # Convert all julia files to notebooks for working
 julia_git := $(wildcard *.jl)
