@@ -16,12 +16,12 @@
 # Imports and setup
 import Pkg;
 Pkg.activate(".");
-using Revise, Printf, CairoMakie, DataFrames, Statistics, UnPack, Random
+using Revise, Printf, CairoMakie, DataFrames, StatsBase, Random, UnPack
 includet("src/plotting.jl")
 includet("src/brownian.jl")
-includet("src/integrals.jl")
 colors = Makie.wong_colors();
 set_theme!(makietheme())
+Random.seed!(42);
 
 # +
 function etd_factors(Δt, Γ, b, T)
@@ -90,7 +90,7 @@ end
 
 function setd_convergence(pars; scale = 4)
     @unpack tmax, nens = pars
-    Δt = @. 1 / 2^(3:9)
+    Δt = @. 1 / 2^(2:8)
 
     N = @. round(Int, tmax / Δt)
     t, W = brownian_motion(Δt[end] / scale, tmax, nens)
@@ -109,7 +109,7 @@ function setd_convergence(pars; scale = 4)
 end
 
 fig, ax = figax(h = 5, xscale = log2, yscale = log2)
-pars = (; tmax = 2, nens = 50000, T = 6.0, Γ = 5.0, b = 1.e-2);
+pars = (; tmax = 1, nens = 20000, T = 6.0, Γ = 5.0, b = 1.e-2);
 N, es, ew = setd_convergence(pars; scale = 2)
 plot_convergence(fig, ax, N, es, ew, -0.5, -1.0)
 fig

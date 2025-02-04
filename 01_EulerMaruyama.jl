@@ -13,18 +13,22 @@
 #     name: julia-1.10
 # ---
 
-using Revise, Printf, CairoMakie, DataFrames, Statistics, UnPack
+# Imports and setup
+import Pkg;
+Pkg.activate(".");
+using Revise, Printf, CairoMakie, DataFrames, StatsBase, Random, UnPack
 includet("src/plotting.jl")
 includet("src/brownian.jl")
 colors = Makie.wong_colors();
 set_theme!(makietheme())
+Random.seed!(42);
 
 # # Geometric Brownian motion
 # $$
 # d X(t) = \lambda X(t) dt + \mu X(t) d W(t)
 # $$
 #
-# Exact solution of the above equation ist
+# Exact solution of the above equation is
 #
 # $$
 # X(t) = X(0) \exp{\left[\left(\lambda - \mu^2/2\right)t + \mu W(t)\right]}
@@ -209,8 +213,6 @@ for ui in sol.u
 end
 fig
 
-prob.p.tmax
-
 function convergence_dejl(prob, nens, algorithm)
     Δt = @. 1 / 2^(5:10)
     N = @. round(Int, prob.p.tmax / Δt)
@@ -234,5 +236,3 @@ ax[1].title = "EM()"
 plot_convergence(fig, ax[2], cvg.SRIW1..., -1.5, -2.0)
 ax[2].title = "SRIW1()"
 fig
-
-

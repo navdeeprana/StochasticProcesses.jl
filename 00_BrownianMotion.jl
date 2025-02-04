@@ -16,12 +16,13 @@
 # Imports and setup
 import Pkg;
 Pkg.activate(".");
-using Revise, Printf, CairoMakie, DataFrames, Statistics
+using Revise, Printf, CairoMakie, DataFrames, StatsBase, Random, UnPack
 includet("src/plotting.jl")
 includet("src/brownian.jl")
 includet("src/integrals.jl")
 colors = Makie.wong_colors();
 set_theme!(makietheme())
+Random.seed!(42);
 
 # # 1. Brownian Motion
 
