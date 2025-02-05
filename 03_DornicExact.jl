@@ -132,13 +132,18 @@ function density_dornic_exact_end(pars, Δt)
     ρ = zeros(nens)
     for n in 1:nens
         ρn = 1.0
-        for i in 2:N+1
+        for i in 1:N
             ρn = noise_dornic!(ρn, λ)
         end
         ρ[n] = ρn
     end
     return ρ
 end
+# -
+
+pars = (tmax = 1.0, nens = 1, μ = 1.0)
+ρ1 = density_dornic_exact_end(pars, 2.e-1);
+# ρ2 = density_transformed_em_end(pars, 1.e-3);
 
 # +
 using SpecialFunctions, LinearAlgebra
@@ -158,25 +163,27 @@ function plot_analytical_distribution!(ax, pars, ρ; kw...)
     Δρ = ρ[2] - ρ[1]
     P = @. P_analytical(ρ, λ)
     # println(partial_probability(Δρ/2, Δρ, λ) / Δρ)
-    P[1] = (1 - Δρ * sum(P[2:end])) / Δρ + 0.5 * partial_probability(1.e-5, Δρ, λ) / Δρ
+    P[1] = (1 - Δρ * sum(P[2:end])) / Δρ
+    @show abs(P[1] - exp(-λ) / Δρ)/P[1]
     lines!(ax, ρ, P; label = "Analytical", kw...)
     scatter!(ax, 0, P[1])
+    scatter!(ax, 0, exp(-λ)/ Δρ)
     return P
 end
 # -
 
-pars = (tmax = 0.5, nens = 100000, μ = 1.0)
+pars = (tmax = 1.0, nens = 20000, μ = 1.0)
 ρ1 = density_dornic_exact_end(pars, 1.e-1);
 ρ2 = density_transformed_em_end(pars, 1.e-3);
 
 # +
 fig, ax = figax()
-bins = LinRange(0, maximum(ρ1), 500)
+bins = LinRange(0, maximum(ρ1), 1000)
 plot_probability_distribution!(ax, ρ1, bins)
-plot_probability_distribution!(ax, ρ2, bins)
+# plot_probability_distribution!(ax, ρ2, bins)
 
 plot_analytical_distribution!(ax, pars, bins)
-ax.limits = (-0.1, 0.1, nothing, nothing)
+ax.limits = (-0.1, 0.5, nothing, nothing)
 axislegend(ax)
 fig
 # -

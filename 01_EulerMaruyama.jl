@@ -23,16 +23,7 @@ colors = Makie.wong_colors();
 set_theme!(makietheme())
 Random.seed!(42);
 
-# # Geometric Brownian motion
-# $$
-# d X(t) = \lambda X(t) dt + \mu X(t) d W(t)
-# $$
-#
-# Exact solution of the above equation is
-#
-# $$
-# X(t) = X(0) \exp{\left[\left(\lambda - \mu^2/2\right)t + \mu W(t)\right]}
-# $$
+# # 1. Euler-Maruyama algorithm
 
 # +
 gbm_analytical(λ, μ, t, W) = exp((λ - μ^2 / 2) * t + μ * W)
@@ -56,6 +47,9 @@ function gbm_meta(pars, Δt)
     Xan = gbm_analytical.(λ, μ, t, W)
     return t, W, X, Xan
 end
+# -
+
+# ## HW : Solve the GBM analytically
 
 # +
 pars = (tmax = 2.0, λ = 2.0, μ = 1.0)
@@ -69,6 +63,9 @@ for (axi, Δt) in zip(ax, [2.e-1, 1.e-1, 1.e-2, 1.e-3])
     axislegend(axi, position = :lt)
 end
 fig
+# -
+
+# # 2. Strong and weak convergence
 
 # +
 function gbm_euler_maruyama_final(pars, t, W)
@@ -111,6 +108,8 @@ plot_convergence(fig, ax, N, es, ew, -0.5, -1.0)
 ax.title = "Convergence for Euler-Maruyama algorithm"
 fig
 
+# # 3. Milstein algorithm
+
 function gbm_milstein_final(pars, t, W)
     @unpack λ, μ = pars
     Δt = t[2] - t[1]
@@ -122,12 +121,15 @@ function gbm_milstein_final(pars, t, W)
     return X
 end
 
+# ## HW : Implement Milstein algorithm for the full trajectory
+
 fig, ax = figax(h = 5, xscale = log2, yscale = log2)
 N, es, ew = convergence(pars, gbm_milstein_final)
 plot_convergence(fig, ax, N, es, ew, -1.0, -1.0)
 ax.title = "Convergence for Milstein algorithm"
 fig
 
+# What to do when analytical solution is not known?
 function convergence_noanalytical(pars, algo::F1, algo_true::F2; scale = 4) where {F1,F2}
     @unpack nens, tmax, λ, μ = pars
 
@@ -165,7 +167,7 @@ for (scale, axi) in zip([1, 2, 4], ax)
 end
 fig
 
-# # Using StochasticDiffEq.jl
+# # 4. StochasticDiffEq.jl
 
 # +
 using StochasticDiffEq
@@ -236,3 +238,7 @@ ax[1].title = "EM()"
 plot_convergence(fig, ax[2], cvg.SRIW1..., -1.5, -2.0)
 ax[2].title = "SRIW1()"
 fig
+
+# ## HW : Play with various other algorithms in StochasticDiffEq.jl, check their convergence
+
+

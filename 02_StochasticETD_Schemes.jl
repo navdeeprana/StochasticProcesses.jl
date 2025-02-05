@@ -53,8 +53,6 @@ function overdamped_oscillator_euler(pars, Δt)
     return x
 end
 
-plot_probability_distribution!(ax, x_eq; bins = 100, kw...) = stephist!(ax, x_eq; normalization = :pdf, bins, kw...)
-
 function plot_boltzmann_distribution!(ax, pars, xm; kw...)
     x = LinRange(-xm, xm, 1000)
     P = @. exp(-(x^2 / 2 + pars.b * x^4 / 4) / pars.T)

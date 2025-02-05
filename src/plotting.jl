@@ -39,3 +39,11 @@ function plot_convergence(fig, ax, N, es, ew, ps, pw)
     axislegend(ax, position = :lb)
     ax.xlabel = "N"
 end
+
+plot_probability_distribution!(ax, X; bins = 100, kw...) = stephist!(ax, X; normalization = :pdf, bins, kw...)
+
+function plot_normal_distribution!(ax, xm; μ = 0.0, σ = 1.0, kw...)
+    x = LinRange(-xm, xm, 1000)
+    P = @. exp(-((x-μ)^2 / (2*σ^2))) / sqrt(2π*σ^2)
+    lines!(ax, x, P; label = "Normal", kw...)
+end

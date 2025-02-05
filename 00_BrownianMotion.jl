@@ -117,40 +117,72 @@ fig
 # +
 # Stochastic integrals for the Wiener process W
 function ito_integral(W)
-    N = length(W)
-    sum = 0
+    N, s = length(W), 0.0
     for i in 1:N-1
-        sum += W[i] * (W[i+1] - W[i])
+        s += W[i] * (W[i+1] - W[i])
     end
-    return sum
+    return s
 end
 
-function strato_integral(W, Δt)
-    N = length(W)
-    sum = 0
+function strato_integral(W, V)
+    N, s = length(W), 0.0
     for i in 1:N-1
-        sum += 0.5 * (W[i+1] + W[i] + sqrt(Δt) * randn()) * (W[i+1] - W[i])
+        s += (0.5*(W[i+1] + W[i]) + V[i]) * (W[i+1] - W[i])
     end
-    return sum
+    return s
 end
-# -
-
-tmax, Δt = 1, 1.e-4
-t, W = brownian_motion(Δt, tmax);
-@show ito_integral(W)
-@show strato_integral(W, Δt);
 
 # One line variants of the above functions
 @inbounds ito_oneliner(W) = sum(W[i] * (W[i+1] - W[i]) for i in 1:length(W)-1)
-@inbounds strato_oneliner(W, Δt) =
-    sum((W[i+1] + W[i] + sqrt(Δt) * randn()) * (W[i+1] - W[i]) / 2 for i in 1:length(W)-1)
 
+@inbounds strato_oneliner(W, V) = sum((0.5*(W[i+1] + W[i]) + V[i]) * (W[i+1] - W[i]) for i in 1:length(W)-1)
+
+percentage_error(a,b) = 100 * abs((a-b)/a)
+# -
+
+# ## HW : Prove the expression for $W((t_j + t_{j+1})/2)$
+
+# +
+tmax, Δt = 1, 1.e-3
+t, W = brownian_motion(Δt, tmax);
+V = sqrt(Δt/4) * randn(length(t))
+@show ito_integral(W)
+
+@show strato_integral(W, V);
+
+# +
 @show ito_oneliner(W)
-@show strato_oneliner(W, t[2] - t[1]);
+
+@show strato_oneliner(W, V);
+# -
 
 # Exact stochastic integrals for the Wiener process
 ito_exact(W, tmax) = W[end]^2 / 2 - tmax / 2
 strato_exact(W) = W[end]^2 / 2
 
-@show ito_exact(W, tmax)
-@show strato_exact(W);
+percentage_error(ito_exact(W, tmax), ito_integral(W))
+
+percentage_error(strato_exact(W), strato_integral(W, V))
+
+# ## HW : Calculate the analytical value of the Ito and Strato integrals
+# ## HW : Find out how the percentage error changes with Δt
+
+function ito_integral_deterministic(f, t, W)
+    s = 0.0
+    for i in 1:length(t)-1
+        ti = t[i]
+        s += f(ti) * (W[i+1] - W[i])
+    end
+    return s
+end
+
+tmax, Δt, nens = 1, 1.e-3, 10000
+f(t) = t^2
+t, df = brownian_motion(Δt, tmax, nens)
+ift = map(Wi -> ito_integral_deterministic(f, t, Wi), eachcol(df));
+
+fig, ax = figax()
+plot_probability_distribution!(ax, ift, label="Numerical")
+plot_normal_distribution!(ax, 1.5; σ = sqrt(1/5), color=:black, linewidth=2)
+axislegend(ax)
+fig
