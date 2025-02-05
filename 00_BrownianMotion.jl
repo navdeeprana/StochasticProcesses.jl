@@ -24,7 +24,7 @@ colors = Makie.wong_colors();
 set_theme!(makietheme())
 Random.seed!(42);
 
-# # 1. Brownian Motion
+# # 1. Wiener Process (Brownian Motion)
 
 tmax, Δt, nens = 1, 1.e-2, 1000
 t, df = brownian_motion(Δt, tmax, nens)
@@ -44,6 +44,9 @@ lines!(ax, t, zero(t), color = :black)
 lines!(ax, t, t, color = :black)
 axislegend(ax, position = :lt)
 fig
+
+# ## HW : Try increasing nens and see how the mean and variance of W(t) change with nens.
+# ## HW : Find that autocorrelation of the Wiener process , i.e. mean(W(t) W(s)) and compare with the analytical expression.
 
 # # 2. Functions of Brownian Motion
 
@@ -66,7 +69,27 @@ axislegend(ax, position = :lt)
 fig
 # -
 
-# # 3. Stochastic Integrals
+# ## HW : Find the analytical expression for the expected value of f(t, W)
+
+# # 3. Riemann integrals
+
+# +
+function riemann_integral(f::F1, xpoint::F2, xs, xf, N) where {F1,F2}
+    Δx = (xf - xs) / N
+    sum = 0
+    for i in 1:N
+        xi = xpoint(xs, i, Δx)
+        sum += f(xi)
+    end
+    return Δx * sum
+end
+
+leftpoint(xs, i, Δx) = xs + (i - 1) * Δx
+riemann_integral_left(f, xs, xf, N) = riemann_integral(f, leftpoint, xs, xf, N)
+
+midpoint(xs, i, Δx) = xs + (i - 1) * Δx + Δx / 2
+riemann_integral_mid(f, xs, xf, N) = riemann_integral(f, midpoint, xs, xf, N)
+# -
 
 f(x) = 3x^2
 @show riemann_integral_left(f, 0, 1, 20);
@@ -86,24 +109,48 @@ axislegend(ax, position = :lb)
 fig
 # -
 
+# ## HW : Find analytical expression for the left and mid rules.
+# ## HW : Implement the right Riemann integral and find out how it converges.
+
+# # 3. Stochastic integrals
+
+# +
+# Stochastic integrals for the Wiener process W
+function ito_integral(W)
+    N = length(W)
+    sum = 0
+    for i in 1:N-1
+        sum += W[i] * (W[i+1] - W[i])
+    end
+    return sum
+end
+
+function strato_integral(W, Δt)
+    N = length(W)
+    sum = 0
+    for i in 1:N-1
+        sum += 0.5 * (W[i+1] + W[i] + sqrt(Δt) * randn()) * (W[i+1] - W[i])
+    end
+    return sum
+end
+# -
+
 tmax, Δt = 1, 1.e-4
 t, W = brownian_motion(Δt, tmax);
 @show ito_integral(W)
 @show strato_integral(W, Δt);
 
+# One line variants of the above functions
+@inbounds ito_oneliner(W) = sum(W[i] * (W[i+1] - W[i]) for i in 1:length(W)-1)
+@inbounds strato_oneliner(W, Δt) =
+    sum((W[i+1] + W[i] + sqrt(Δt) * randn()) * (W[i+1] - W[i]) / 2 for i in 1:length(W)-1)
+
 @show ito_oneliner(W)
 @show strato_oneliner(W, t[2] - t[1]);
 
-ito_exact(W, tmax), strato_exact(W)
+# Exact stochastic integrals for the Wiener process
+ito_exact(W, tmax) = W[end]^2 / 2 - tmax / 2
+strato_exact(W) = W[end]^2 / 2
 
-tmax, Δt, nens = 1, 1.e-2, 2000
-t, df = brownian_motion(Δt, tmax, nens)
-t = t[1:end-1]
-df2 = DataFrame(map(W -> (@. W[2:end] * W[1:end-1]), eachcol(df)), :auto)
-fig, ax = figax(a = 2, h = 5)
-lines!(ax, t, mean.(eachrow(df2)), label = "Numerical Average")
-lines!(ax, t, t)
-axislegend(ax, position = :lt)
-fig
-
-
+@show ito_exact(W, tmax)
+@show strato_exact(W);
