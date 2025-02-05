@@ -27,3 +27,4 @@ Numerical methods for stochastic processes
 - Higham, An algorithmic introduction to numerical simulation of stochastic differential equations, SIAM Review, 2001
 - Pechenik and Levine, PRE, 1999
 - Dornic, Chate, and Munoz, PRL, 2005
+- Cox and Matthews, J. Comp. Phys., 2002
