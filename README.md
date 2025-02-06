@@ -1,6 +1,27 @@
 # StochasticProcesses.jl
 Numerical methods for stochastic processes
 
+# Getting started
+
+> [!IMPORTANT]
+> This is not a Julia package. You cannot install it with `add StochasticProcesses`.
+
+## Prerequisites
+
+If you have run Julia notebooks before, proceed to next step.
+
+- Install Julia. Using [juliaup](https://github.com/JuliaLang/juliaup) is recommended.
+- Install jupyterlab and jupytext, using anaconda or any other way you prefer.
+- Install IJulia using Julia package manager.
+
+## Running the notebooks
+
+- Clone/download the repository.
+- Install the Julia dependencies by activating the project and then instantiating it.
+- The notebooks are converted and stored under `jl/` folder as plain `.jl` files using jupytext. To recreate the notebooks from these files run `make notebooks` and then move it to the base directory of the repository. You have to manually move them to avoid overwriting any notebooks you have previously generated.
+-  If you do not have `make`, you can convert them directly by running `jupytext --to ipynb filename.jl`.
+- Now you can run jupyterlab and start running the notebooks. 
+
 # Notation
 
 ## General
