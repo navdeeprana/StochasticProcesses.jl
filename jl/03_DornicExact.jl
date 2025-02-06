@@ -23,7 +23,6 @@ colors = Makie.wong_colors();
 set_theme!(makietheme())
 Random.seed!(42);
 
-# +
 function density_em(pars, t, W)
     @unpack μ = pars
     Δt = t[2] - t[1]
@@ -40,11 +39,11 @@ function density_em(pars, t, W)
     return ρ
 end
 
-pars = (tmax = 2.0, μ = 1.0)
+# +
+pars = (tmax = 3.0, μ = 1.0)
 t, W = brownian_motion(1.e-2, pars.tmax)
 ρ = density_em(pars, t, W);
 
-# +
 fig, ax = figax(h = 5, xlabel = "t", ylabel = "ρ(t)")
 hlines!(ax, 0, color = (:black, 0.5), linestyle = :dash)
 
@@ -69,7 +68,7 @@ function density_transformed_em(pars, t, W)
 end
 
 # +
-fig, ax = figax(h = 7, xlabel = "t", ylabel = "ρ(t)")
+fig, ax = figax(h = 5, xlabel = "t", ylabel = "ρ(t)")
 hlines!(ax, 0, color = (:black, 0.5), linestyle = :dash)
 ρtrans = density_transformed_em(pars, t, W)
 
@@ -101,8 +100,10 @@ end
 
 fig, ax = figax(h = 7, xlabel = "t", ylabel = "ρ(t)")
 hlines!(ax, 0, color = (:black, 0.5), linestyle = :dash)
-t, ρ = density_dornic_exact(pars, 1.e-3)
-lines!(ax, t, ρ)
+for i in 1:5
+    t, ρ = density_dornic_exact(pars, 1.e-2)
+    lines!(ax, t, ρ)
+end
 fig
 
 # +
@@ -139,65 +140,57 @@ function density_dornic_exact_end(pars, Δt)
     end
     return ρ
 end
-# -
-
-pars = (tmax = 1.0, nens = 1, μ = 1.0)
-ρ1 = density_dornic_exact_end(pars, 2.e-1);
-# ρ2 = density_transformed_em_end(pars, 1.e-3);
 
 # +
-using SpecialFunctions, LinearAlgebra
-
-plot_probability_distribution!(ax, ρ, bins; kw...) = stephist!(ax, ρ; normalization = :pdf, bins, kw...)
+using SpecialFunctions, LinearAlgebra, Integrals
 
 P_analytical(ρ, λ; ρ0 = 1) = λ * exp(-λ * (ρ0 + ρ)) * sqrt(ρ0 / ρ) * besseli(1, 2 * λ * sqrt(ρ0 * ρ))
 
-function partial_probability(x0, x1, λ; N = 500)
-    x = LinRange(x0, x1, N)
-    P = @. P_analytical(x, λ)
-    return sum(P) * (x[2] - x[1])
-end
+probability(ρs, ρf, λ) = solve(IntegralProblem(P_analytical, (ρs, ρf), λ), QuadGKJL()).u
 
 function plot_analytical_distribution!(ax, pars, ρ; kw...)
-    λ = 2 / (pars.μ^2 * pars.tmax)
-    Δρ = ρ[2] - ρ[1]
+    λ, Δρ = 2 / (pars.μ^2 * pars.tmax), ρ[2] - ρ[1]
     P = @. P_analytical(ρ, λ)
-    # println(partial_probability(Δρ/2, Δρ, λ) / Δρ)
     P[1] = (1 - Δρ * sum(P[2:end])) / Δρ
-    @show abs(P[1] - exp(-λ) / Δρ)/P[1]
+    P1_better = (1 - probability(Δρ, ρ[end], λ)) / Δρ
     lines!(ax, ρ, P; label = "Analytical", kw...)
-    scatter!(ax, 0, P[1])
-    scatter!(ax, 0, exp(-λ)/ Δρ)
+    scatter!(ax, 0, P[1]; kw...)
+    scatter!(ax, Δρ, P1_better; color=:red)
     return P
 end
 # -
 
-pars = (tmax = 1.0, nens = 20000, μ = 1.0)
+pars = (tmax = 0.5, nens = 100000, μ = 0.5)
 ρ1 = density_dornic_exact_end(pars, 1.e-1);
 ρ2 = density_transformed_em_end(pars, 1.e-3);
 
 # +
-fig, ax = figax()
-bins = LinRange(0, maximum(ρ1), 1000)
-plot_probability_distribution!(ax, ρ1, bins)
-# plot_probability_distribution!(ax, ρ2, bins)
+fig, ax = figax(xlabel="ρ", ylabel="P(ρ)")
+bins = LinRange(0, maximum(ρ1), 500)
+plot_probability_distribution!(ax, ρ1; bins, label="Exact")
+plot_probability_distribution!(ax, ρ2; bins, label="Transformed")
 
-plot_analytical_distribution!(ax, pars, bins)
-ax.limits = (-0.1, 0.5, nothing, nothing)
+plot_analytical_distribution!(ax, pars, bins, color=:black)
+ax.limits = (-0.1, 2.0, nothing, nothing)
 axislegend(ax)
+ax.title = "tmax = 0.5, μ = 0.5"
 fig
 # -
 
-pars = (tmax = 1.0, nens = 100000, μ = 1.0)
+pars = (tmax = 0.5, nens = 200000, μ = 1.0)
 ρ1 = density_dornic_exact_end(pars, 1.e-1);
 ρ2 = density_transformed_em_end(pars, 1.e-3);
 
-fig, ax = figax(h = 10)
-bins = LinRange(0, maximum(ρ1), 2000)
-plot_probability_distribution!(ax, ρ1, bins)
-plot_probability_distribution!(ax, ρ2, bins)
-plot_analytical_distribution!(ax, pars, bins)
-ax.limits = (-0.1, 2.0, nothing, nothing)
+fig, axis = figax(h = 5,nx=2, xlabel="ρ", ylabel="P(ρ)")
+bins = LinRange(0, maximum(ρ1), 1000)
+for ax in axis
+    plot_probability_distribution!(ax, ρ1; bins, label="Exact", linewidth=3)
+    plot_probability_distribution!(ax, ρ2; bins, label="Transformed", linewidth=3)
+    plot_analytical_distribution!(ax, pars, bins, color=:black)
+    ax.title = "tmax = 0.5, μ = 1.0"
+end
+axis[2].limits = (-0.02, 0.1, nothing, nothing)
+axislegend.(axis)
 fig
 
 # +
@@ -205,6 +198,3 @@ fig
 # h = fit(Histogram, ρ1, bins; closed=:left)
 # h = normalize(h)
 # lines!(ax, h.edges[1][1:end-1], h.weights)
-# -
-
-

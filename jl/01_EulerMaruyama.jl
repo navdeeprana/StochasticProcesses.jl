@@ -239,6 +239,6 @@ plot_convergence(fig, ax[2], cvg.SRIW1..., -1.5, -2.0)
 ax[2].title = "SRIW1()"
 fig
 
-# ## HW : Play with various other algorithms in StochasticDiffEq.jl, check their convergence
+# ## HW : Play with various other algorithms in StochasticDiffEq.jl and check their convergence
 
 

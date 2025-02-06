@@ -36,25 +36,25 @@ end
 fig
 
 fig, ax = figax(a = 2, title = "Mean and Variance", xlabel = "t")
-Wμ, Wσ = mean.(eachrow(df)), var.(eachrow(df))
-lines!(ax, t, Wμ, label = "mean")
-lines!(ax, t, Wσ, label = "variance")
 lines!(ax, t, zero(t), color = :black)
 lines!(ax, t, t, color = :black)
+lines!(ax, t, mean.(eachrow(df)), label = "mean")
+lines!(ax, t, var.(eachrow(df)), label = "variance")
 axislegend(ax, position = :lt)
 fig
 
 # ## HW : Try increasing nens and see how the mean and variance of W(t) change with nens.
-# ## HW : Find that autocorrelation of the Wiener process , i.e. mean(W(t) W(s)) and compare with the analytical expression.
+# ## HW : Find that autocorrelation of the Wiener process , i.e. <W(t) W(s)> and compare with the analytical expression.
 
 # # 2. Functions of Brownian Motion
 
 # +
-f(t, W) = @. exp(t + W / 2)
+f(t, W, a, b) = @. exp(a * t + b * W)
+meanf(t, a, b) = @. exp((a+b^2/2)*t)
 
 fig, ax = figax(a = 2, h = 5, title = "f(t, W(t)) = exp(t + W(t)/2)", xlabel = "t", ylabel = "f(t, W(t))")
 
-dff = DataFrame(map(W -> f(t, W), eachcol(df)), :auto)
+dff = DataFrame(map(W -> f(t, W, 1, 1/2), eachcol(df)), :auto)
 
 for e in 1:10
     lines!(ax, t, dff[!, e], color = (colors[1], 0.2), linewidth = 1.0)
@@ -63,7 +63,7 @@ end
 ax.limits = (-0.1, 1.1, 0.5, 4.0)
 ax.yticks = 1:1:4
 lines!(ax, t, mean.(eachrow(dff)), label = "Numerical Average")
-lines!(ax, t, exp.(9t / 8), label = "Analytical", color = colors[2])
+lines!(ax, t, meanf(t, 1, 1/2), label = "Analytical", color = colors[2])
 axislegend(ax, position = :lt)
 fig
 # -
