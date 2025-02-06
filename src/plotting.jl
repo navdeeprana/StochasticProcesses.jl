@@ -35,7 +35,7 @@ function plot_convergence(fig, ax, N, es, ew, ps, pw)
     scatterlines!(ax, N, es, label = "Strong", markersize = 20, linestyle = :dash)
     scatterlines!(ax, N, ew, label = "Weak", markersize = 20, linestyle = :dash)
     lines!(ax, N, power_law(N, ps, es[1]), color = :black)
-    lines!(ax, N, power_law(N, pw, ew[1]), color = :black)
+    lines!(ax, N, power_law(N, pw, ew[1]), color = :red)
     axislegend(ax, position = :lb)
     ax.xlabel = "N"
 end
