@@ -8,10 +8,11 @@ Numerical methods for stochastic processes
 
 ## Prerequisites
 
-If you have run Julia notebooks before, proceed to next step.
+You will need a working installation of Julia, jupyterlab, jupytext, and IJulia to generate
+and run the notebooks. If you can run Julia notebooks on your machine, proceed to the next step.
 
 - Install Julia. Using [juliaup](https://github.com/JuliaLang/juliaup) is recommended.
-- Install jupyterlab and jupytext, using anaconda or any other way you prefer.
+- Install jupyterlab and jupytext using anaconda or any other way you prefer.
 - Install IJulia using Julia package manager.
 
 ## Running the notebooks
