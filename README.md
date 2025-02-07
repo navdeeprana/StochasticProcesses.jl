@@ -43,10 +43,12 @@ and run the notebooks. If you can run Julia notebooks on your machine, proceed t
 
 # References
 
-- Gardiner, Handbook of stochastic methods, 2002
-- Kampen, Stochastic processes in physics and chemistry, 2007
-- Kampen, Ito versus Stratonovich, J. Stat. Phys., 1981
-- Higham, An algorithmic introduction to numerical simulation of stochastic differential equations, SIAM Review, 2001
-- Pechenik and Levine, PRE, 1999
-- Dornic, Chate, and Munoz, PRL, 2005
-- Cox and Matthews, J. Comp. Phys., 2002
+- Gardiner, Crispin W., **Handbook of Stochastic Methods: For Physics, Chemistry and the Natural Sciences** (2002).
+- Van Kampen, N. G., **Stochastic Processes in Physics and Chemistry** (2007).
+- Øksendal, B. K., **Stochastic Differential Equations: An Introduction with Applications** (2007).
+- Van Kampen, N. G., **Itô versus Stratonovich**. [Journal of Statistical Physics 24(1) (1981)](https://doi.org/10.1007/BF01007642).
+- Higham, Desmond J., **An Algorithmic Introduction to Numerical Simulation of Stochastic Differential Equations**. [SIAM Review 43(3) (2001)](https://doi.org/10.1137/S0036144500378302).
+- Pechenik, Leonid, and Herbert Levine, **Interfacial Velocity Corrections Due to Multiplicative Noise**. [Physical Review E 59(4) (1999)](https://doi.org/10.1103/PhysRevE.59.3893).
+- Dornic, Ivan, Hugues Chaté, and Miguel A. Muñoz, **Integration of Langevin Equations with Multiplicative Noise and the Viability of Field Theories for Absorbing Phase Transitions**. [Physical Review Letters 94(10) (2005)](https://doi.org/10.1103/PhysRevLett.94.100601).
+- Cox, S.M., and P.C. Matthews. **Exponential Time Differencing for Stiff Systems**. [Journal of Computational Physics 176(2) (2002)](https://doi.org/10.1006/jcph.2002.6995).
+
