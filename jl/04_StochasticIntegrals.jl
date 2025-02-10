@@ -79,7 +79,7 @@ end
 function strato_integral(W, V)
     N, s = length(W), 0.0
     for i in 1:N-1
-        s += (0.5*(W[i+1] + W[i]) + V[i]) * (W[i+1] - W[i])
+        s += (0.5 * (W[i+1] + W[i]) + V[i]) * (W[i+1] - W[i])
     end
     return s
 end
@@ -87,9 +87,9 @@ end
 # One line variants of the above functions
 @inbounds ito_oneliner(W) = sum(W[i] * (W[i+1] - W[i]) for i in 1:length(W)-1)
 
-@inbounds strato_oneliner(W, V) = sum((0.5*(W[i+1] + W[i]) + V[i]) * (W[i+1] - W[i]) for i in 1:length(W)-1)
+@inbounds strato_oneliner(W, V) = sum((0.5 * (W[i+1] + W[i]) + V[i]) * (W[i+1] - W[i]) for i in 1:length(W)-1)
 
-percentage_error(a,b) = 100 * abs((a-b)/a)
+percentage_error(a, b) = 100 * abs((a - b) / a)
 # -
 
 # ## HW : Prove the expression for $W((t_j + t_{j+1})/2)$
@@ -97,7 +97,7 @@ percentage_error(a,b) = 100 * abs((a-b)/a)
 # +
 tmax, Δt = 1, 1.e-3
 t, W = brownian_motion(Δt, tmax);
-V = sqrt(Δt/4) * randn(length(t))
+V = sqrt(Δt / 4) * randn(length(t))
 @show ito_integral(W)
 
 @show strato_integral(W, V);
@@ -134,7 +134,7 @@ t, df = brownian_motion(Δt, tmax, nens)
 ift = map(Wi -> ito_integral_deterministic(f, t, Wi), eachcol(df));
 
 fig, ax = figax()
-plot_probability_distribution!(ax, ift, label="Numerical")
-plot_normal_distribution!(ax, 1.5; σ = sqrt(1/5), color=:black, linewidth=2)
+plot_probability_distribution!(ax, ift, label = "Numerical")
+plot_normal_distribution!(ax, 1.5; σ = sqrt(1 / 5), color = :black, linewidth = 2)
 axislegend(ax)
 fig

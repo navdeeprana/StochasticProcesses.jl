@@ -50,11 +50,11 @@ fig
 
 # +
 f(t, W, a, b) = @. exp(a * t + b * W)
-meanf(t, a, b) = @. exp((a+b^2/2)*t)
+meanf(t, a, b) = @. exp((a + b^2 / 2) * t)
 
 fig, ax = figax(a = 2, h = 5, title = "f(t, W(t)) = exp(t + W(t)/2)", xlabel = "t", ylabel = "f(t, W(t))")
 
-dff = DataFrame(map(W -> f(t, W, 1, 1/2), eachcol(df)), :auto)
+dff = DataFrame(map(W -> f(t, W, 1, 1 / 2), eachcol(df)), :auto)
 
 for e in 1:10
     lines!(ax, t, dff[!, e], color = (colors[1], 0.2), linewidth = 1.0)
@@ -63,9 +63,11 @@ end
 ax.limits = (-0.1, 1.1, 0.5, 4.0)
 ax.yticks = 1:1:4
 lines!(ax, t, mean.(eachrow(dff)), label = "Numerical Average")
-lines!(ax, t, meanf(t, 1, 1/2), label = "Analytical", color = colors[2])
+lines!(ax, t, meanf(t, 1, 1 / 2), label = "Analytical", color = colors[2])
 axislegend(ax, position = :lt)
 fig
 # -
 
 # ## HW : Find the analytical expression for the expected value of f(t, W)
+
+

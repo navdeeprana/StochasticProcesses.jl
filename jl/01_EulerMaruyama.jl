@@ -101,7 +101,7 @@ function convergence(pars, gbm_discrete::F) where {F}
 end
 # -
 
-pars = (nens = 10000, tmax = 2.0, λ = 2.0, μ = 1.0)
+pars = (nens = 20000, tmax = 2.0, λ = 2.0, μ = 1.0)
 fig, ax = figax(h = 5, xscale = log2, yscale = log2)
 N, es, ew = convergence(pars, gbm_euler_maruyama_final)
 plot_convergence(fig, ax, N, es, ew, -0.5, -1.0)
