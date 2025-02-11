@@ -50,5 +50,8 @@ and run the notebooks. If you can run Julia notebooks on your machine, proceed t
 - Higham, Desmond J., **An Algorithmic Introduction to Numerical Simulation of Stochastic Differential Equations**. [SIAM Review 43(3) (2001)](https://doi.org/10.1137/S0036144500378302).
 - Pechenik, Leonid, and Herbert Levine, **Interfacial Velocity Corrections Due to Multiplicative Noise**. [Physical Review E 59(4) (1999)](https://doi.org/10.1103/PhysRevE.59.3893).
 - Dornic, Ivan, Hugues Chaté, and Miguel A. Muñoz, **Integration of Langevin Equations with Multiplicative Noise and the Viability of Field Theories for Absorbing Phase Transitions**. [Physical Review Letters 94(10) (2005)](https://doi.org/10.1103/PhysRevLett.94.100601).
-- Cox, S.M., and P.C. Matthews. **Exponential Time Differencing for Stiff Systems**. [Journal of Computational Physics 176(2) (2002)](https://doi.org/10.1006/jcph.2002.6995).
+- Cox, S.M., and P.C. Matthews, **Exponential Time Differencing for Stiff Systems**. [Journal of Computational Physics 176(2) (2002)](https://doi.org/10.1006/jcph.2002.6995).
+- Gillespie, Daniel T., **Exact Stochastic Simulation of Coupled Chemical Reactions**. [The Journal of Physical Chemistry 81(25) (1977)](https://doi.org/10.1021/j100540a008).
+- Goldenfeld, Nigel, Tommaso Biancalani, and Farshid Jafarpour, **Universal Biology and the Statistical Mechanics of Early Life**. [Philosophical Transactions of the Royal Society A 375(2109) (2017)](https://doi.org/10.1098/rsta.2016.0341).
+
 
