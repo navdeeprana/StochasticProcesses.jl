@@ -197,17 +197,20 @@ fig
 
 # # Moran process
 
-f(x) = x * (1 - x)
-fapp(x) = x < 0.5 ? x : 1 - x
-fig, ax = figax()
-x = 0:0.01:1
-lines!(ax, x, f.(x))
-lines!(ax, x, fapp.(x))
+# +
+f(x) = sqrt(x * (1 - x))
+fapp(x) = x < 0.5 ? sqrt(x) : sqrt(1 - x)
+
+x = 0:0.001:1
+fig, ax = figax(xlabel="ρ", title="Approximating noise")
+lines!(ax, x, f.(x), label="Exact")
+lines!(ax, x, fapp.(x), label="Approximation")
+axislegend(ax, position=:cb)
 fig
 
 # +
-function moran_process(pars, Δt, ρ0, fapprox)
-    @unpack γ, μ, tmax, nens, = pars
+function moran_process_end(pars, Δt, ρ0, fapprox)
+    @unpack γ, μ, tmax, nens = pars
     N = round(Int, tmax / Δt)
     λ = 2 / (μ^2 * Δt)
     ρ = zeros(nens)
@@ -222,7 +225,22 @@ function moran_process(pars, Δt, ρ0, fapprox)
     return ρ
 end
 
-fapprox1(ρn, λ) = ρn < 0.5 ? noise_dornic!(ρn, λ) : 1 - noise_dornic!(1 - ρn, λ)
+function moran_process_trajectory(pars, Δt, ρ0, fapprox)
+    @unpack γ, μ, tmax, nens = pars
+    N = round(Int, tmax / Δt)
+    λ = 2 / (μ^2 * Δt)
+    ρ = zeros(nens, N)
+    ρ[:, 1] .= ρ0
+    @inbounds for i in 2:N
+        for n in 1:nens
+            ρs = fapprox(ρ[n, i-1], λ)
+            ρ[n, i] = ρs + γ * Δt * ρs * (1 - ρs^2)
+        end
+    end
+    return ρ
+end
+
+fapprox1(ρn, λ) = ρn < 0.5 ? noise_dornic!(ρn, λ) : 1.0 - noise_dornic!(1.0 - ρn, λ)
 fapprox2(ρn, λ) = ρn < 0.5 ? noise_dornic!(ρn, λ) : ρn
 
 extinction_probability(γ, μ, ρ0) = expm1(2 * γ * (1 - ρ0) / μ^2) / expm1(2 * γ / μ^2)
@@ -230,17 +248,17 @@ extinction_probability(γ, μ, ρ0) = expm1(2 * γ * (1 - ρ0) / μ^2) / expm1(2
 extinction_probability(ρ) = 1 - mean(ρ)
 # -
 
-pars = (γ = 1.0, μ = 1.0, tmax = 2.0, nens = 100000)
+pars = (γ = 1.0, μ = 1.0, tmax = 2.0, nens = 50000)
 ρ0 = 0.05:0.05:0.50
-ρens1 = [moran_process(pars, 1.e-2, ρ0i, fapprox1) for ρ0i in ρ0]
-ρens2 = [moran_process(pars, 1.e-2, ρ0i, fapprox2) for ρ0i in ρ0];
+ρens1 = [moran_process_end(pars, 1.e-2, ρ0i, fapprox1) for ρ0i in ρ0]
+ρens2 = [moran_process_end(pars, 1.e-2, ρ0i, fapprox2) for ρ0i in ρ0];
 
 # +
 pext1 = [extinction_probability(ρ) for ρ in ρens1]
 pext2 = [extinction_probability(ρ) for ρ in ρens2]
 pext_an = extinction_probability.(pars.γ, pars.μ, ρ0)
 
-fig, ax = figax()
+fig, ax = figax(xlabel="ρ0", ylabel="Pext(ρ0)")
 scatter!(ax, ρ0, pext1, label = "Approx")
 scatter!(ax, ρ0, pext2, label = "Half-approx")
 lines!(ax, ρ0, pext_an, color = :black, label = "Analytical")
@@ -248,6 +266,32 @@ axislegend(ax)
 fig
 # -
 
-# # HW : Implement a better deterministic algorithm for the SODE of Moran process
+pars = (γ = 1.0, μ = 1.0, tmax = 2.0, nens = 10)
+ρens1 = moran_process_trajectory(pars, 1.e-2, 0.2, fapprox1);
+ρens2 = moran_process_trajectory(pars, 1.e-2, 0.2, fapprox2);
 
+fig, ax = figax(nx=2,h=5, a = 2, xlabel="t", ylabel="ρ(t)")
+ax[1].title = "Large reversals for approx"
+ax[2].title = "Deterministic for half-approx"
+for n in 1:pars.nens
+    lines!(ax[1], ρens1[n, :])
+    lines!(ax[2], ρens2[n, :])
+end
+fig
 
+pars = (γ = 1.0, μ = 0.1, tmax = 5.0, nens = 20)
+ρens1 = moran_process_trajectory(pars, 1.e-2, 0.2, fapprox1);
+ρens2 = moran_process_trajectory(pars, 1.e-2, 0.2, fapprox2);
+
+fig, ax = figax(nx=2,h=5,a = 1.8, xlabel="t", ylabel="ρ(t)")
+fig[0, :] = Label(fig, "Works better for small μ")
+ax[1].title = "approx"
+ax[2].title = "half approx"
+for n in 1:pars.nens
+    lines!(ax[1], ρens1[n, :])
+    lines!(ax[2], ρens2[n, :])
+end
+fig
+
+# ## HW : Implement a better deterministic algorithm for the SODE of Moran process
+# ## HW : Implement the Voter model as discussed in Dornic et. al, PRL
