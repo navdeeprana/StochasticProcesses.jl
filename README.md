@@ -58,4 +58,6 @@ and run the notebooks. If you can run Julia notebooks on your machine, proceed t
 ### Gillespie algorithm and its applications
 - Gillespie, Daniel T., **A General Method for Numerically Simulating the Stochastic Time Evolution of Coupled Chemical Reactions**. [Journal of Computational Physics 22(4) (1976)](https://doi.org/10.1016/0021-9991(76)90041-3).
 - Gillespie, Daniel T., **Exact Stochastic Simulation of Coupled Chemical Reactions**. [The Journal of Physical Chemistry 81(25) (1977)](https://doi.org/10.1021/j100540a008).
+- Gillespie, Daniel T., **Approximate Accelerated Stochastic Simulation of Chemically Reacting Systems**. [The Journal of Chemical Physics 115(4) (2001)](https://doi.org/10.1063/1.1378322).
+- Cao, Yang, Daniel T. Gillespie, and Linda R. Petzold, **Efficient Step Size Selection for the Tau-Leaping Simulation Method**. [The Journal of Chemical Physics 124(4) (2006)](https://doi.org/10.1063/1.2159468).
 - Goldenfeld, Nigel, Tommaso Biancalani, and Farshid Jafarpour, **Universal Biology and the Statistical Mechanics of Early Life**. [Philosophical Transactions of the Royal Society A 375(2109) (2017)](https://doi.org/10.1098/rsta.2016.0341).
