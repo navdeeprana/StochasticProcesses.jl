@@ -6,7 +6,7 @@
 #       extension: .jl
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.16.6
+#       jupytext_version: 1.16.7
 #   kernelspec:
 #     display_name: Julia 1.10.8
 #     language: julia
@@ -134,6 +134,7 @@ fig
 
 # + [markdown] jp-MarkdownHeadingCollapsed=true
 # ## HW : Implement a better deterministic algorithm for the SODE of Moran process
+# ## HW : Implement the general distribution with source terms in Dornic et. al, PRL
 # ## HW : Implement the Voter model as discussed in Dornic et. al, PRL
 # -
 
@@ -217,5 +218,3 @@ function moran_process_gillespie_tau_end(pars, NA0)
     end
     return t, Z
 end
-
-
