@@ -18,7 +18,6 @@ import Pkg;
 Pkg.activate(".");
 using Revise, Printf, CairoMakie, DataFrames, StatsBase, Random, UnPack
 includet("src/plotting.jl")
-includet("src/moran_process.jl")
 colors = Makie.wong_colors();
 set_theme!(makietheme())
 Random.seed!(42);
@@ -173,7 +172,6 @@ function moran_process_gillespie_end(pars, NA0)
 end
 # -
 
-using ProgressMeter
 pars = (k1 = 0.11, k2 = 0.10, tmax = 1, nens = 10, N = 10000)
 fig, ax = figax(a = 2, xlabel = "t", ylabel = "ρ(t)")
 for n in 1:pars.nens
@@ -191,6 +189,7 @@ pars = (k1 = 0.101, k2 = 0.100, tmax = 5, nens = 1000, N = 10000)
 @show γ, μ = langevin_params(pars.k1, pars.k2, pars.N)
 extinction_probability(γ, μ, 1.e-2)
 
+using ProgressMeter
 NA0 = 50:50:500
 Zens = @showprogress [moran_process_gillespie_end(pars, NA0i)[2] for NA0i in NA0];
 
@@ -203,18 +202,4 @@ lines!(ax, NA0 ./ pars.N, pext_an, color = :black, label = "Analytical")
 axislegend(ax)
 fig
 
-function moran_process_gillespie_tau_end(pars, NA0)
-    @unpack k1, k2, nens, tmax, N, tmax = pars
-    t, Z = zeros(nens), zeros(Int, nens)
-    for n in 1:nens
-        tnow, nAnow = 0.0, NA0
-        while (tnow < tmax) && (0 < nAnow < N)
-            fNA = nAnow * (N - nAnow)
-            propensity = (k1 + k2) * fNA
-            tnow = tnow - log(rand()) / propensity
-            rand() < k1 * fNA / propensity ? nAnow += 1 : nAnow -= 1
-        end
-        t[n], Z[n] = tnow, nAnow
-    end
-    return t, Z
-end
+# ## HW: Implement Gillespie Tau algorithm
