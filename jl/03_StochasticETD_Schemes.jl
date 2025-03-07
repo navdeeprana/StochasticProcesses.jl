@@ -76,10 +76,28 @@ end
 axislegend(axes[2], position = :cb)
 fig
 
-function oscillator_etd_final(t, W, pars)
+# +
+using StochasticDiffEq
+
+f(u, p, t) = - p.Γ * (u + p.b * u^3)
+g(u, p, t) = sqrt(2 * p.Γ * p.T)
+
+prob = SDEProblem(f, g, 0.0, (0.0, pars.tmax), pars)
+sol = solve(EnsembleProblem(prob), SRIW1(), adaptive=false, dt=1.e-2, saveat = pars.tmax, trajectories = pars.nens);
+# -
+
+fig, ax = figax(h = 5, xlabel = "x", ylabel = "P(x)")
+x = [ui.u[end] for ui in sol.u]
+plot_boltzmann_distribution!(ax, pars, maximum(x); color = :black)
+plot_probability_distribution!(ax, x; linewidth = 2, label = "Stochastic ETD")
+ax.limits = (-9, 9, nothing, nothing)
+axislegend(ax, position = :cb)
+fig
+
+function oscillator_etd_final(t, W, pars; x0 = 0.0)
     Δt = t[2] - t[1]
     f = etd_factors(Δt, pars.Γ, pars.b, pars.T)
-    x = 0
+    x = x0
     @inbounds for i in 2:length(W)
         x = f[1] * x + f[2] * x^3 + f[3] * (W[i] - W[i-1])
     end
@@ -97,9 +115,9 @@ function setd_convergence(pars; scale = 4)
 
     estrong, eweak = Float64[], Float64[]
     for Ni in N
-        skip = length(t) ÷ Ni
+        skip = (length(t)-1) ÷ Ni
         @views tn, Wn = t[1:skip:end], W[1:skip:end, :]
-        XT = map(Wni -> oscillator_etd_final(tn, Wni, pars), eachcol(Wn))
+        XT = map(Wni -> oscillator_etd_final(tn, Wni, pars; x0 = 1.0), eachcol(Wn))
         push!(estrong, mean(@. abs(XanT .- XT)))
         push!(eweak, abs(mean(XanT) - mean(XT)))
     end
@@ -107,9 +125,42 @@ function setd_convergence(pars; scale = 4)
 end
 
 fig, ax = figax(h = 5, xscale = log2, yscale = log2)
-pars = (; tmax = 1, nens = 20000, T = 6.0, Γ = 5.0, b = 1.e-2);
-N, es, ew = setd_convergence(pars; scale = 2)
+pars = (; tmax = 2.0, nens = 20000, T = 6.0, Γ = 5.0, b = 1.e-2);
+N, es, ew = setd_convergence(pars; scale = 4)
 plot_convergence(fig, ax, N, es, ew, -0.5, -1.0)
 fig
 
+function setd_convergence_dejl(prob, nens; scale = 4)
+    Δt = @. 1 / 2^(3:0.5:8)
+    N = @. round(Int, prob.p.tmax / Δt)
+
+    eprob = EnsembleProblem(prob)
+    sol = solve(eprob, SRIW1(), adaptive=false, dt=Δt[end]/scale, save_everystep = true, save_noise=true, trajectories = pars.nens);
+    XanT = [ui.u[end] for ui in sol.u]
+
+    t = sol.u[1].W.t
+    s = 1/sqrt(t[2] - t[1]) # diffeq.jl noise is normalised with T.
+    W = DataFrame(W1 = s .* sol.u[1].W.W)
+    for e in 2:nens
+        W[!, "W$e"] = s .* sol.u[e].W.W
+    end
+
+    estrong, eweak = Float64[], Float64[]
+    for Ni in N
+        skip = (length(t)-1) ÷ Ni
+        @views tn, Wn = t[1:skip:end], W[1:skip:end, :]
+        XT = map(Wni -> oscillator_etd_final(tn, Wni, pars; x0 = prob.u0), eachcol(Wn))
+
+        push!(estrong, mean(@. abs(XanT .- XT)))
+        push!(eweak, abs(mean(XanT) - mean(XT)))
+    end
+    return N, estrong, eweak, sol
+end
+
+fig, ax = figax(h = 5, xscale = log2, yscale = log2)
+pars = (; tmax = 1.0, nens = 20000, T = 1.0, Γ = 1.0, b = 1.e-2);
+prob = SDEProblem(f, g, 1.0, (0.0, pars.tmax), pars)
+@time N, es, ew, sol = setd_convergence_dejl(prob, pars.nens; scale = 4)
+plot_convergence(fig, ax, N, es, ew, -0.5, -1.0)
+fig
 

@@ -215,13 +215,27 @@ for ui in sol.u
 end
 fig
 
+# +
+u_analytic(u0, p, t, W) = u0 * exp((p.λ - p.μ^2 / 2) * t + p.μ * W)
+func = SDEFunction(f, g, analytic = u_analytic)
+prob = SDEProblem(func, u0, tspan, pars)
+sol = solve(prob, EM(), dt = 1.e-3)
+
+fig, ax = figax(title = "Comparison with analytics", xlabel = "time", ylabel = "X(t)")
+lines!(ax, sol.t, sol.u, label = "EM()")
+lines!(ax, sol.t, sol.u_analytic, label = "Analytical")
+axislegend(ax, position = :lt)
+fig
+# -
+
 function convergence_dejl(prob, nens, algorithm)
     Δt = @. 1 / 2^(5:10)
     N = @. round(Int, prob.p.tmax / Δt)
-    estrong, eweak = Float64[], Float64[]
     eprob = EnsembleProblem(prob)
+
+    estrong, eweak = Float64[], Float64[]
     for Δti in Δt
-        sol = solve(eprob, algorithm, adaptive = false, dt = Δti, trajectories = nens)
+        sol = solve(eprob, algorithm, adaptive = false, dt = Δti, trajectories = nens, saveat = prob.p.tmax)
         XT = [ui.u[end] for ui in sol.u]
         XanT = [ui.u_analytic[end] for ui in sol.u]
         push!(estrong, mean(@. abs(XanT .- XT)))
@@ -240,5 +254,3 @@ ax[2].title = "SRIW1()"
 fig
 
 # ## HW : Play with various other algorithms in StochasticDiffEq.jl and check their convergence
-
-
