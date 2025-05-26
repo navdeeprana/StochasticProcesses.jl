@@ -4,15 +4,16 @@
 #   jupytext:
 #     text_representation:
 #       extension: .jl
-#       format_name: light
-#       format_version: '1.5'
-#       jupytext_version: 1.16.7
+#       format_name: percent
+#       format_version: '1.3'
+#       jupytext_version: 1.17.1
 #   kernelspec:
-#     display_name: Julia 1.10.8
+#     display_name: Julia 1.10.9
 #     language: julia
 #     name: julia-1.10
 # ---
 
+# %%
 # Imports and setup
 import Pkg;
 Pkg.activate(".");
@@ -23,18 +24,22 @@ colors = Makie.wong_colors();
 set_theme!(makietheme())
 Random.seed!(42);
 
+# %% [markdown]
 # # 1. Wiener Process (Brownian Motion)
 
+# %%
 tmax, Δt, nens = 1, 1.e-2, 1000
 t, df = brownian_motion(Δt, tmax, nens)
 show(df; allrows = false)
 
+# %%
 fig, ax = figax(a = 2, title = "Ensemble of Brownian motion", xlabel = "t", ylabel = "W(t)")
 for e in 1:10
     lines!(ax, t, df[!, e])
 end
 fig
 
+# %%
 fig, ax = figax(a = 2, title = "Mean and Variance", xlabel = "t")
 lines!(ax, t, zero(t), color = :black)
 lines!(ax, t, t, color = :black)
@@ -43,12 +48,14 @@ lines!(ax, t, var.(eachrow(df)), label = "variance")
 axislegend(ax, position = :lt)
 fig
 
+# %% [markdown]
 # ## HW : Try increasing nens and see how the mean and variance of W(t) change with nens.
 # ## HW : Find that autocorrelation of the Wiener process , i.e. <W(t) W(s)> and compare with the analytical expression.
 
+# %% [markdown]
 # # 2. Functions of Brownian Motion
 
-# +
+# %%
 f(t, W, a, b) = @. exp(a * t + b * W)
 meanf(t, a, b) = @. exp((a + b^2 / 2) * t)
 
@@ -66,8 +73,6 @@ lines!(ax, t, mean.(eachrow(dff)), label = "Numerical Average")
 lines!(ax, t, meanf(t, 1, 1 / 2), label = "Analytical", color = colors[2])
 axislegend(ax, position = :lt)
 fig
-# -
 
+# %% [markdown]
 # ## HW : Find the analytical expression for the expected value of f(t, W)
-
-

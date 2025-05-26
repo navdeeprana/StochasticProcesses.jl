@@ -4,15 +4,16 @@
 #   jupytext:
 #     text_representation:
 #       extension: .jl
-#       format_name: light
-#       format_version: '1.5'
-#       jupytext_version: 1.16.7
+#       format_name: percent
+#       format_version: '1.3'
+#       jupytext_version: 1.17.1
 #   kernelspec:
 #     display_name: Julia 1.10.8
 #     language: julia
 #     name: julia-1.10
 # ---
 
+# %%
 # Imports and setup
 import Pkg;
 Pkg.activate(".");
@@ -23,6 +24,7 @@ colors = Makie.wong_colors();
 set_theme!(makietheme())
 Random.seed!(42);
 
+# %%
 function density_em(pars, t, W)
     @unpack μ = pars
     Δt = t[2] - t[1]
@@ -39,7 +41,7 @@ function density_em(pars, t, W)
     return ρ
 end
 
-# +
+# %%
 pars = (tmax = 3.0, μ = 1.0)
 t, W = brownian_motion(1.e-2, pars.tmax)
 ρ = density_em(pars, t, W);
@@ -49,8 +51,8 @@ hlines!(ax, 0, color = (:black, 0.5), linestyle = :dash)
 
 lines!(ax, t, ρ)
 fig
-# -
 
+# %%
 function density_transformed_em(pars, t, W)
     @unpack μ = pars
     Δt = t[2] - t[1]
@@ -67,7 +69,7 @@ function density_transformed_em(pars, t, W)
     return u .^ 2
 end
 
-# +
+# %%
 fig, ax = figax(h = 5, xlabel = "t", ylabel = "ρ(t)")
 hlines!(ax, 0, color = (:black, 0.5), linestyle = :dash)
 ρtrans = density_transformed_em(pars, t, W)
@@ -76,7 +78,7 @@ lines!(ax, t, ρ)
 lines!(ax, t, ρtrans)
 fig
 
-# +
+# %%
 using Distributions: Gamma, Poisson
 
 function noise_dornic!(ρ, λ)
@@ -91,13 +93,13 @@ function density_dornic_exact(pars, Δt)
     t = Δt .* (0:1:N)
     ρ = zeros(N + 1)
     ρ[1] = 1
-    @inbounds for i in 2:N+1
+    @inbounds for i in 2:(N+1)
         ρ[i] = noise_dornic!(ρ[i-1], λ)
     end
     return t, ρ
 end
-# -
 
+# %%
 fig, ax = figax(h = 7, xlabel = "t", ylabel = "ρ(t)")
 hlines!(ax, 0, color = (:black, 0.5), linestyle = :dash)
 for i in 1:5
@@ -106,14 +108,14 @@ for i in 1:5
 end
 fig
 
-# +
+# %%
 function density_transformed_em_end(pars, Δt)
     @unpack μ, tmax, nens = pars
     N = round(Int, tmax / Δt)
     u = zeros(nens)
     for n in 1:nens
         un = 1.0
-        for i in 2:N+1
+        for i in 2:(N+1)
             if abs(un) > 1.e-3
                 un = un - Δt * μ^2 / (8 * un) + (μ / 2) * sqrt(Δt) * randn()
             else
@@ -141,7 +143,7 @@ function density_dornic_exact_end(pars, Δt)
     return ρ
 end
 
-# +
+# %%
 using SpecialFunctions, LinearAlgebra, Integrals
 
 P_analytical(ρ, λ; ρ0 = 1) = λ * exp(-λ * (ρ0 + ρ)) * sqrt(ρ0 / ρ) * besseli(1, 2 * λ * sqrt(ρ0 * ρ))
@@ -160,13 +162,13 @@ function plot_analytical_distribution!(ax, pars, ρ; kw...)
     scatter!(ax, Δρ, P1_better; color = :red)
     return P
 end
-# -
 
+# %%
 pars = (tmax = 0.5, nens = 100000, μ = 0.5)
 ρ1 = density_dornic_exact_end(pars, 1.e-1);
 ρ2 = density_transformed_em_end(pars, 1.e-3);
 
-# +
+# %%
 fig, ax = figax(xlabel = "ρ", ylabel = "P(ρ)")
 bins = LinRange(0, maximum(ρ1), 500)
 plot_probability_distribution!(ax, ρ1; bins, label = "Exact")
@@ -177,12 +179,13 @@ ax.limits = (-0.1, 2.0, nothing, nothing)
 axislegend(ax)
 ax.title = "tmax = 0.5, μ = 0.5"
 fig
-# -
 
+# %%
 pars = (tmax = 0.5, nens = 200000, μ = 1.0)
 ρ1 = density_dornic_exact_end(pars, 1.e-1);
 ρ2 = density_transformed_em_end(pars, 1.e-3);
 
+# %%
 fig, axis = figax(h = 5, nx = 2, xlabel = "ρ", ylabel = "P(ρ)")
 bins = LinRange(0, maximum(ρ1), 500)
 for ax in axis
@@ -195,4 +198,4 @@ axis[2].limits = (-0.02, 0.1, nothing, nothing)
 axislegend.(axis)
 fig
 
-
+# %%

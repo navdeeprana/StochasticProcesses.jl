@@ -47,3 +47,10 @@ function plot_normal_distribution!(ax, xm; μ = 0.0, σ = 1.0, kw...)
     P = @. exp(-((x-μ)^2 / (2*σ^2))) / sqrt(2π*σ^2)
     lines!(ax, x, P; label = "Normal", kw...)
 end
+
+function plot_boltzmann_distribution!(ax, pars, xm; kw...)
+    x = LinRange(-xm, xm, 1000)
+    P = @. exp(-(x^2 / 2 + pars.b * x^4 / 4) / pars.T)
+    P = P / sum(P * (x[2] - x[1]))
+    lines!(ax, x, P; label = "Boltzmann", kw...)
+end

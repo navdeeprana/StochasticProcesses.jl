@@ -3,10 +3,9 @@
 function brownian_motion(Δt, tmax)
     N = round(Int, tmax / Δt)
     t = Δt .* (0:1:N)
-    dW = randn(N)
     W = zeros(N + 1)
     for i in 1:N
-        W[i+1] = W[i] + sqrt(Δt) * dW[i]
+        W[i+1] = W[i] + sqrt(Δt) * randn()
     end
     return t, W
 end

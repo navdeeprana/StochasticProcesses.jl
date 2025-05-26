@@ -29,7 +29,7 @@ function moran_process_gillespie_trajectory(pars)
     @inbounds while (tnow < tmax) && (0 <= nAnow <= N)
         push!(t, tnow)
         push!(Z, nAnow)
-        fNA = nAnow * (N - nAnow) 
+        fNA = nAnow * (N - nAnow)
         propensity = (k1+k2)*fNA
         tnow = tnow - log(rand())/propensity
         rand() < k1 * fNA / propensity ? nAnow += 1 : nAnow -= 1
@@ -43,7 +43,7 @@ function moran_process_gillespie_end(pars, NA0)
     for n in 1:nens
         tnow, nAnow = 0.0, NA0
         while (tnow < tmax) && (0 < nAnow < N)
-            fNA = nAnow * (N - nAnow) 
+            fNA = nAnow * (N - nAnow)
             propensity = (k1+k2)*fNA
             tnow = tnow - log(rand())/propensity
             rand() < k1 * fNA / propensity ? nAnow += 1 : nAnow -= 1
@@ -67,8 +67,8 @@ Zens = [moran_process_gillespie_end(pars, NA0i)[2] for NA0i in NA0];
 pext = [extinction_probability(Z) for Z in Zens]
 pext_an = [extinction_probability(γ, μ, NA0i/pars.N) for NA0i in NA0];
 
-fig, ax = figax(xlabel="ρ0", ylabel="Pext(ρ0)")
-scatter!(ax, NA0./pars.N, pext, label = "Gillespie")
-lines!(ax, NA0./pars.N, pext_an, color = :black, label = "Analytical")
+fig, ax = figax(xlabel = "ρ0", ylabel = "Pext(ρ0)")
+scatter!(ax, NA0 ./ pars.N, pext, label = "Gillespie")
+lines!(ax, NA0 ./ pars.N, pext_an, color = :black, label = "Analytical")
 axislegend(ax)
 fig
