@@ -23,6 +23,7 @@ includet("src/brownian.jl")
 includet("src/etd.jl")
 includet("src/sevector.jl")
 includet("src/oscillator.jl")
+includet("src/convergence.jl")
 colors = Makie.wong_colors();
 set_theme!(makietheme())
 Random.seed!(42);
@@ -65,45 +66,14 @@ fig
 # ## Convergence for the Anharmonic Oscillator
 
 # %%
-function noise_from_sol(sol)
-    t, W = sol.u[1].W.t, DataFrame()
-    for e in 1:length(sol.u)
-        W[!, "W$e"] = sol.u[e].W.W
-    end
-    return t, W
-end
-
-function convergence_dejl(Δt, sol, algorithm::F) where {F}
-    N = @. round(Int, prob.p.tmax / Δt)
-    if prob.p.b == 0.0
-        XanT = [final_solution(OU_analytical!, ui.W.t, ui.W.W, prob.p) for ui in sol.u]
-    else
-        XanT = [ui.u[end] for ui in sol.u]
-    end
-    mXanT = mean(XanT)
-
-    t, W = noise_from_sol(sol)
-
-    es, ew = Float64[], Float64[]
-    for Ni in N
-        skip = (length(t) - 1) ÷ Ni
-        @views tn, Wn = t[1:skip:end], W[1:skip:end, :]
-        XT = map(Wni -> final_solution(algorithm, tn, Wni, pars), eachcol(Wn))
-        push!(es, mean(@. abs(XanT - XT)))
-        push!(ew, abs(mXanT - mean(XT)))
-    end
-    return (; Δt, N, es, ew)
-end
-
-# %%
 Random.seed!(314)
-pars = (; x0 = 0.5, tmax = 10.0, nens = 1000, T = 0.1, Γ = 1.0, b = 1.e-1);
+pars = (; x0 = 1.0, tmax = 5.0, nens = 100, T = 5.e-2, Γ = 1.0, b = 1.e-1);
 
-# Δt = @. 1 / 2^(8:-1:4)
-Δt = @. 1 / [10, 20, 40, 50, 80, 100, 200, 400, 500, 800, 1000, 2000]
+Δt = @. 1 / 2^(11:-1:2)
+# Δt = @. 1 / [10, 20, 40, 50, 80, 100, 200, 400, 500, 800, 1000, 2000]
 
 prob = SDEProblem(f, g, pars.x0, (0.0, pars.tmax), pars);
-sol = solve(prob, EM(), adaptive = false, dt = 1.e-1, save_everystep = true, save_noise = true);
+sol = solve(prob, EM(), adaptive = false, dt = 1.e-2, save_everystep = true, save_noise = true);
 
 # %%
 eprob = EnsembleProblem(prob)
@@ -111,98 +81,61 @@ sol = solve(
     eprob,
     EM(),
     adaptive = false,
-    dt = minimum(Δt) / 10,
+    dt = minimum(Δt) / 2,
     save_everystep = true,
     save_noise = true,
     trajectories = pars.nens
 );
-@time cvg1 = convergence_dejl(Δt, sol, oscillator_EM!);
-@time cvg2 = convergence_dejl(Δt, sol, oscillator_srk2!);
-@time cvg3 = convergence_dejl(Δt, sol, oscillator_setd1!)
-@time cvg4 = convergence_dejl(Δt, sol, oscillator_etd2rk!);
+XanT = [ui.u[end] for ui in sol.u]
+@time cvg = convergence(Δt, sol, XanT, oscillator_setd1!);
+
+# %%
+fig, ax = figax(nx = 1, h = 5, xscale = log2, yscale = log2, xlabel = L"h")
+@unpack Δt, es, ew = cvg
+scatterlines!(ax, Δt, es; markersize = 20, linestyle = :dash, label = "Strong")
+scatterlines!(ax, Δt, ew; markersize = 20, linestyle = :dash, label = "Weak")
+lines!(ax, Δt, @. 1.e-1 * Δt)
+lines!(ax, Δt, @. 4.e-3 * Δt)
+axislegend(position = :rb)
+save("figs/convergence_etd1.pdf", fig)
+fig
+
+# %%
+eprob = EnsembleProblem(prob)
+sol = solve(
+    eprob,
+    EM(),
+    adaptive = false,
+    dt = minimum(Δt) / 2,
+    save_everystep = true,
+    save_noise = true,
+    trajectories = pars.nens
+);
+XanT = [ui.u[end] for ui in sol.u]
+@time cvg1 = convergence(Δt, sol, XanT, oscillator_EM!);
+@time cvg2 = convergence(Δt, sol, XanT, oscillator_srk2!);
+@time cvg4 = convergence(Δt, sol, XanT, oscillator_etd2rk!);
 
 # %%
 fig, ax = figax(nx = 2, h = 5, xscale = log10, yscale = log10)
-for (cvg, label) in zip([cvg1, cvg2, cvg3, cvg4], ["EULER", "SRK2", "ETD", "ETD2RK"])
-    if label in ["SRK2", "ETD2RK"]
-        continue
-    end
+for (cvg, label) in zip([cvg1, cvg2, cvg3, cvg4], ["EULER", "SRK2", "ETD2RK"])
     @unpack Δt, es, ew = cvg
-    scatterlines!(ax[1], Δt, (@. es / Δt^0); label, markersize = 20)
-    scatterlines!(ax[2], Δt, (@. ew / Δt^0); label, markersize = 20)
-    lines!(ax[1], Δt, @. 1.e+0 * Δt)
-    lines!(ax[2], Δt, @. 1.e+1 * Δt)
+    scatterlines!(ax[1], Δt, es; label, markersize = 20)
+    scatterlines!(ax[2], Δt, ew; label, markersize = 20)
 end
-# axislegend(position = :rb)
 fig
 
 # %% [markdown]
 # ## Convergence for the linear SDE
 
 # %%
-function linearsde_analytical!(x, t, W, pars)
-    @unpack α, β, T = pars
-    x[1] = pars.x0
-    ito = 0.0
-    for i in 2:length(W)
-        ito = ito + exp(α * t[i]) * (W[i] - W[i-1])
-        x[i] = exp(-α * t[i]) * (pars.x0 - (β/α) * (1 - exp(α * t[i])) + sqrt(2 * T) * ito)
-    end
-    nothing
-end
-function convergence_linear(Δt, sol, algorithm::F) where {F}
-    N = @. round(Int, prob.p.tmax / Δt)
-    XanT = [final_solution(linearsde_analytical!, ui.W.t, ui.W.W, prob.p) for ui in sol.u]
-    mXanT = mean(XanT)
-
-    t, W = noise_from_sol(sol)
-
-    es, ew = Float64[], Float64[]
-    for Ni in N
-        skip = (length(t) - 1) ÷ Ni
-        @views tn, Wn = t[1:skip:end], W[1:skip:end, :]
-        XT = map(Wni -> final_solution(algorithm, tn, Wni, pars), eachcol(Wn))
-        push!(es, mean(@. abs(XanT - XT)))
-        push!(ew, abs(mXanT - mean(XT)))
-    end
-    return (; Δt, N, es, ew)
-end
-
-function convergence_linearsde_dejl(Δt, prob, algorithm)
-    N = @. round(Int, prob.p.tmax / Δt)
-
-    eprob = EnsembleProblem(prob)
-    es, ew = Float64[], Float64[]
-    for Δti in Δt
-        sol = solve(
-            eprob,
-            algorithm,
-            adaptive = false,
-            dt = Δti,
-            save_everystep = true,
-            save_noise = true,
-            trajectories = prob.p.nens
-        )
-        XT = [ui.u[end] for ui in sol.u]
-        XanT = [final_solution(linearsde_analytical!, ui.W.t, ui.W.W, prob.p) for ui in sol.u]
-        push!(es, mean(@. abs(XanT .- XT)))
-        push!(ew, abs(mean(XanT) - mean(XT)))
-    end
-    return (; Δt, N, es, ew)
-end
-
-# %%
-pars = (; x0 = 0.5, tmax = 2.0, nens = 1000, T = 1.0, α = 4.0, β = 0.5);
+Random.seed!(42)
+pars = (; x0 = 0.5, tmax = 40.0, nens = 100, T = 1.0, α = 1.0, β = 1.0);
 f_lin(u, p, t) = -p.α * u + p.β
 g_lin(u, p, t) = sqrt(2 * p.T)
 
-Δt = @. 1 / 2^(8:-1:4)
-
 prob = SDEProblem(f_lin, g_lin, pars.x0, (0.0, pars.tmax), pars)
 sol = solve(prob, EM(), adaptive = false, dt = 5.e-2, save_everystep = true, save_noise = true);
-
-# eprob = EnsembleProblem(prob)
-# sol = solve(eprob, EM(), adaptive = false, dt = minimum(Δt) / 8, save_everystep = true, save_noise = true, trajectories = pars.nens);
 
 # %%
 t, W = sol.t, sol.W.W
@@ -219,7 +152,34 @@ lines!(ax, t, x; color = :black)
 fig
 
 # %%
-fig, ax = figax(nx = 2, h = 5, xscale = log2, yscale = log2)
+Δt = @. 1 / 2^(10:-1:2)
+eprob = EnsembleProblem(prob)
+sol = solve(
+    eprob,
+    EM(),
+    adaptive = false,
+    dt = minimum(Δt) / 2,
+    save_everystep = true,
+    save_noise = true,
+    trajectories = pars.nens
+);
+XanT = [final_solution(linearsde_analytical!, ui.W.t, ui.W.W, prob.p) for ui in sol.u];
+
+# %%
+fig, ax = figax(nx = 1, h = 5, xscale = log2, yscale = log2, xlabel = L"h")
+
+@time cvg = convergence(Δt, sol, XanT, linearsde_setd1!);
+@unpack Δt, es, ew = cvg
+scatterlines!(ax, Δt, es; markersize = 20, linestyle = :dash, label = "Strong")
+scatterlines!(ax, Δt, ew; markersize = 20, linestyle = :dash, label = "Weak")
+
+lines!(ax, Δt, @. 4.e-1 * Δt)
+lines!(ax, Δt, @. 4.e-2 * Δt)
+axislegend(position = :rb)
+fig
+
+# %%
+fig, ax = figax(nx = 2, h = 5, xscale = log10, yscale = log10)
 
 @time cvg = convergence_linearsde_dejl(Δt, prob, EM());
 @unpack Δt, es, ew = cvg
@@ -227,24 +187,6 @@ scatterlines!(ax[1], Δt, es; markersize = 20)
 scatterlines!(ax[2], Δt, ew; markersize = 20)
 
 @time cvg = convergence_linearsde_dejl(Δt, prob, SRA3());
-@unpack Δt, es, ew = cvg
-scatterlines!(ax[1], Δt, es; markersize = 20)
-scatterlines!(ax[2], Δt, ew; markersize = 20)
-
-lines!(ax[1], Δt, @. 1.e+0 * Δt^1.0)
-lines!(ax[2], Δt, @. 1.e+0 * Δt^1.0)
-# axislegend(position = :rb)
-fig
-
-# %%
-fig, ax = figax(nx = 2, h = 5, xscale = log2, yscale = log2)
-
-@time cvg = convergence_linear(Δt, sol, linearsde_EM!);
-@unpack Δt, es, ew = cvg
-scatterlines!(ax[1], Δt, es; markersize = 20)
-scatterlines!(ax[2], Δt, ew; markersize = 20)
-
-@time cvg = convergence_linear(Δt, sol, linearsde_setd1!);
 @unpack Δt, es, ew = cvg
 scatterlines!(ax[1], Δt, es; markersize = 20)
 scatterlines!(ax[2], Δt, ew; markersize = 20)
