@@ -1,3 +1,7 @@
+# Single Element Vector.
+# Essentially implements an array that only has one element.
+# x = SEVector()
+# x[i] = x[1] for all i.
 struct SEVector{T}
     v::Vector{T}
 end
