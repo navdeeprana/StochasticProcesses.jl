@@ -6,30 +6,32 @@
 #       extension: .jl
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.17.1
+#       jupytext_version: 1.17.2
 #   kernelspec:
-#     display_name: Julia 1.10.9
+#     display_name: sohrab 1.10.10
 #     language: julia
-#     name: julia-1.10
+#     name: sohrab-1.10
 # ---
 
 # %%
 # Imports and setup
 import Pkg;
 Pkg.activate(".");
-using Revise, Printf, CairoMakie, DataFrames, StatsBase, Random, UnPack
+using Revise, Printf, CairoMakie, DataFrames, StatsBase, Random
 includet("src/plotting.jl")
 includet("src/brownian.jl")
-includet("src/etd.jl")
-includet("src/sevector.jl")
-includet("src/oscillator.jl")
+includet("src/repeated_vector.jl")
+includet("src/etd_factors.jl")
+includet("src/sde_algorithms.jl")
 includet("src/convergence.jl")
+includet("src/oscillator.jl")
 colors = Makie.wong_colors();
 set_theme!(makietheme())
+CairoMakie.enable_only_mime!("svg")
 Random.seed!(42);
 
 # %%
-pars = (; tmax = 10, nens = 10000, T = 6.0, Γ = 5.0, b = 1.e-2);
+pars = (; x0 = 0.0, tmax = 10, nens = 10000, T = 6.0, Γ = 5.0, b = 1.e-2, z = 3);
 
 fig, axes = figax(nx = 2, h = 5, xlabel = "x", ylabel = "P(x)")
 for (ax, Δt) in zip(axes, [1.e-2, 1.e-1])
@@ -47,10 +49,10 @@ fig
 # %%
 using OrdinaryDiffEq, StochasticDiffEq
 
-f(u, p, t) = -p.Γ * (u + p.b * u^3)
+f(u, p, t) = -p.Γ * (u + p.b * u^p.z)
 g(u, p, t) = sqrt(2 * p.Γ * p.T)
 
-prob = SDEProblem(f, g, 0.0, (0.0, pars.tmax), pars)
+prob = SDEProblem(f, g, pars.x0, (0.0, pars.tmax), pars)
 sol = solve(EnsembleProblem(prob), SRIW1(), saveat = pars.tmax, trajectories = pars.nens);
 
 # %%
@@ -67,7 +69,7 @@ fig
 
 # %%
 Random.seed!(314)
-pars = (; x0 = 1.0, tmax = 5.0, nens = 100, T = 5.e-2, Γ = 1.0, b = 1.e-1);
+pars = (; x0 = 1.0, tmax = 5.0, nens = 100, T = 5.e-2, Γ = 1.0, b = 1.e-1, z = 3);
 
 Δt = @. 1 / 2^(11:-1:2)
 # Δt = @. 1 / [10, 20, 40, 50, 80, 100, 200, 400, 500, 800, 1000, 2000]
@@ -77,52 +79,28 @@ sol = solve(prob, EM(), adaptive = false, dt = 1.e-2, save_everystep = true, sav
 
 # %%
 eprob = EnsembleProblem(prob)
-sol = solve(
-    eprob,
-    EM(),
-    adaptive = false,
-    dt = minimum(Δt) / 2,
-    save_everystep = true,
-    save_noise = true,
-    trajectories = pars.nens
-);
+sol = solve(eprob, EM(), adaptive = false, dt = minimum(Δt) / 2, save_everystep = true, save_noise = true, trajectories = pars.nens);
+t, W = noise_from_sol(sol)
 XanT = [ui.u[end] for ui in sol.u]
-@time cvg = convergence(Δt, sol, XanT, oscillator_setd1!);
+@time cvg = convergence(pars, Δt, t, W, XanT, oscillator_setd1!);
 
 # %%
 fig, ax = figax(nx = 1, h = 5, xscale = log2, yscale = log2, xlabel = L"h")
-@unpack Δt, es, ew = cvg
-scatterlines!(ax, Δt, es; markersize = 20, linestyle = :dash, label = "Strong")
-scatterlines!(ax, Δt, ew; markersize = 20, linestyle = :dash, label = "Weak")
-lines!(ax, Δt, @. 1.e-1 * Δt)
-lines!(ax, Δt, @. 4.e-3 * Δt)
-axislegend(position = :rb)
-save("figs/convergence_etd1.pdf", fig)
+plot_convergence(fig, ax, cvg, 1.0, 1.0)
+# save("figs/convergence_etd1.pdf", fig)
 fig
 
-# %%
-eprob = EnsembleProblem(prob)
-sol = solve(
-    eprob,
-    EM(),
-    adaptive = false,
-    dt = minimum(Δt) / 2,
-    save_everystep = true,
-    save_noise = true,
-    trajectories = pars.nens
-);
-XanT = [ui.u[end] for ui in sol.u]
-@time cvg1 = convergence(Δt, sol, XanT, oscillator_EM!);
-@time cvg2 = convergence(Δt, sol, XanT, oscillator_srk2!);
-@time cvg4 = convergence(Δt, sol, XanT, oscillator_etd2rk!);
+# %% [markdown]
+# ## Convergence for the GBM
 
 # %%
-fig, ax = figax(nx = 2, h = 5, xscale = log10, yscale = log10)
-for (cvg, label) in zip([cvg1, cvg2, cvg3, cvg4], ["EULER", "SRK2", "ETD2RK"])
-    @unpack Δt, es, ew = cvg
-    scatterlines!(ax[1], Δt, es; label, markersize = 20)
-    scatterlines!(ax[2], Δt, ew; label, markersize = 20)
-end
+pars = (x0 = 1.0, tmax = 2.0, a = 2.0, b = 1.0, nens = 20000, δ = 0.1)
+@time cvg = convergence_gbm(pars, gbm_setd1!);
+
+# %%
+fig, ax = figax(h = 5, xscale = log2, yscale = log2)
+plot_convergence(fig, ax, cvg, 0.5, 1.0)
+ax.title = "SETD1 for GBM"
 fig
 
 # %% [markdown]
@@ -130,9 +108,9 @@ fig
 
 # %%
 Random.seed!(42)
-pars = (; x0 = 0.5, tmax = 40.0, nens = 100, T = 1.0, α = 1.0, β = 1.0);
-f_lin(u, p, t) = -p.α * u + p.β
-g_lin(u, p, t) = sqrt(2 * p.T)
+pars = (; x0 = 0.5, tmax = 10.0, nens = 500, a = -1.0, b = 1.0, c = 0.5);
+f_lin(u, p, t) = p.a * u + p.b
+g_lin(u, p, t) = p.c
 
 prob = SDEProblem(f_lin, g_lin, pars.x0, (0.0, pars.tmax), pars)
 sol = solve(prob, EM(), adaptive = false, dt = 5.e-2, save_everystep = true, save_noise = true);
@@ -141,73 +119,142 @@ sol = solve(prob, EM(), adaptive = false, dt = 5.e-2, save_everystep = true, sav
 t, W = sol.t, sol.W.W
 
 fig, ax = figax(a = 3)
-lines!(ax, t, sol.u)
+lines!(ax, t, sol.u; linewidth = 3)
 
-x = zero(W)
-linearsde_EM!(x, t, W, pars)
-lines!(ax, t, x)
-
-linearsde_analytical!(x, t, W, pars)
+x = linearsde_analytical(pars.x0, pars.a, pars.b, pars.c, t, W)
 lines!(ax, t, x; color = :black)
 fig
 
 # %%
+linearsde_analytical!(x, t, W, pars) = linearsde_analytical!(x, pars.x0, pars.a, pars.b, pars.c, t, W)
 Δt = @. 1 / 2^(10:-1:2)
 eprob = EnsembleProblem(prob)
-sol = solve(
-    eprob,
-    EM(),
-    adaptive = false,
-    dt = minimum(Δt) / 2,
-    save_everystep = true,
-    save_noise = true,
-    trajectories = pars.nens
-);
+sol = solve(eprob, EM(), adaptive = false, dt = minimum(Δt) / 4, save_everystep = true, save_noise = true, trajectories = pars.nens);
+t, W = noise_from_sol(sol)
 XanT = [final_solution(linearsde_analytical!, ui.W.t, ui.W.W, prob.p) for ui in sol.u];
+@time cvg = convergence(pars, Δt, t, W, XanT, linearsde_setd1!);
 
 # %%
 fig, ax = figax(nx = 1, h = 5, xscale = log2, yscale = log2, xlabel = L"h")
-
-@time cvg = convergence(Δt, sol, XanT, linearsde_setd1!);
-@unpack Δt, es, ew = cvg
-scatterlines!(ax, Δt, es; markersize = 20, linestyle = :dash, label = "Strong")
-scatterlines!(ax, Δt, ew; markersize = 20, linestyle = :dash, label = "Weak")
-
-lines!(ax, Δt, @. 4.e-1 * Δt)
-lines!(ax, Δt, @. 4.e-2 * Δt)
-axislegend(position = :rb)
+plot_convergence(fig, ax, cvg, 1.0, 1.0)
 fig
 
-# %%
-fig, ax = figax(nx = 2, h = 5, xscale = log10, yscale = log10)
-
-@time cvg = convergence_linearsde_dejl(Δt, prob, EM());
-@unpack Δt, es, ew = cvg
-scatterlines!(ax[1], Δt, es; markersize = 20)
-scatterlines!(ax[2], Δt, ew; markersize = 20)
-
-@time cvg = convergence_linearsde_dejl(Δt, prob, SRA3());
-@unpack Δt, es, ew = cvg
-scatterlines!(ax[1], Δt, es; markersize = 20)
-scatterlines!(ax[2], Δt, ew; markersize = 20)
-
-lines!(ax[1], Δt, @. 1.e+0 * Δt^1.0)
-lines!(ax[2], Δt, @. 1.e+0 * Δt^1.0)
-# axislegend(position = :rb)
-fig
+# %% [markdown]
+# # Stability of the schemes
 
 # %%
-function noise_increment_from_sol(sol, N)
-    t, W = sol.u[1].W.t[1:N:end], DataFrame()
-    for e in 1:length(sol.u)
-        Wi = sol.u[e].W.W[1:N:end]
-        dW = Wi[2:end] .- Wi[1:(end-1)]
-        W[!, "W$e"] = dW
-    end
-    return t, W
+pars = (; x0 = 1.0, tmax = 5, nens = 10000, a = -3.0, b = sqrt(2));
+
+# %%
+t, W = brownian_motion(5.e-3, pars.tmax, pars.nens)
+Xan = map(Wi -> gbm_analytical.(pars.x0, pars.a, pars.b, t, Wi), eachcol(W));
+
+# %%
+fig, ax = figax(nx = 2)
+for i in 1:10
+    lines!(ax[1], t, Xan[i], color = (:black, 0.2))
 end
-fig, ax = figax()
-t, dW = noise_increment_from_sol(sol, 8);
-plot_probability_distribution!(ax, vec(Matrix(dW)))
-plot_normal_distribution!(ax, 0.1; μ = 0.0, σ = sqrt(t[2] - t[1]), color = :black)
+lines!(ax[1], t, mean(Xan))
+lines!(ax[2], t, var(Xan))
+lines!(ax[2], t, gbm_var.(pars.x0, pars.a, pars.b, t))
+ax[1].limits = (0, 3, nothing, nothing)
+ax[2].limits = (0, 3, nothing, nothing)
 fig
+
+# %%
+isEMstable(p, Δt) = abs(1+Δt*p.a)^2 + Δt*abs(p.b)^2 < 1
+
+# %%
+fig, ax = figax(yscale = Makie.pseudolog10)
+for Δt in [1.e-2, 1.e-1, 5.e-1]
+    t, W = brownian_motion(Δt, pars.tmax, pars.nens)
+    XT = map(Wi -> gbm_euler_maruyama(t, Wi, pars), eachcol(W));
+    l = @sprintf "Δt=%.2f, Stable=%s" Δt string(isEMstable(pars, Δt))
+    lines!(ax, t, var(XT), label = l)
+end
+t = 0.0:1.e-3:pars.tmax
+lines!(ax, t, gbm_var.(pars.x0, pars.a, pars.b, t), color = :black)
+axislegend(ax)
+fig
+
+# %%
+fig, ax = figax(yscale = Makie.pseudolog10)
+for Δt in [1.e-2, 1.e-1, 5.e-1]
+    t, W = brownian_motion(Δt, pars.tmax, pars.nens)
+    parsδ = (; pars..., δ = 0.1)
+    XT = map(Wi -> gbm_setd1(t, Wi, parsδ), eachcol(W));
+    l = @sprintf "Δt=%.2f" Δt
+    lines!(ax, t, var(XT), label = l)
+    if Δt > 2.e-1
+        parsδ = (; pars..., δ = 0.1)
+        XT = map(Wi -> gbm_setd1(t, Wi, parsδ), eachcol(W));
+        lines!(ax, t, var(XT), label = l)
+    end
+end
+t = 0.0:1.e-3:pars.tmax
+lines!(ax, t, gbm_var.(pars.x0, pars.a, pars.b, t), color = :black)
+# axislegend(ax)
+fig
+
+# %%
+OU_setd1!(x, t, W, p, δ) = setd1!(
+    x, t, W, p,
+    p -> (-p.k-δ, p.D),
+    (x0, p) -> δ*x0,
+    (x0, p) -> 1
+)
+OU_EMvariance(k, D, h) = 2*D/(2k-k^2*h)
+
+function OU_SETDvariance(k, D, h, δ)
+    c = -k-δ
+    expch = exp(c*h)
+    return (D/c)*(exp(2*c*h)-1)/(1-(expch+(δ/c)*(expch-1))^2)
+end
+
+function OU2linearsde(p)
+    (; x0, tmax, nens, k, D) = p
+    return (; x0, tmax, nens, a = -k, b = 0, c = sqrt(2D))
+end
+pars = (; x0 = 1.0, tmax = 5, nens = 200000, k = 2.0, D = 1.0);
+parsEM = OU2linearsde(pars)
+
+# %%
+function varerr!(vs, xt)
+    x = Iterators.partition(xt, length(xt)÷40)    
+    vi = [var(xi) for xi in x]
+    push!(vs.m, mean(vi))
+    push!(vs.s, std(vi))
+end
+
+Δt = [2.5e-3, 5.e-3, 1.e-2, 2.e-2, 4.e-2, 8.e-2, 1.6e-1]
+var1 = (;m=Float64[], s=Float64[])
+var2 = (;m=Float64[], s=Float64[])
+var3 = (;m=Float64[], s=Float64[])
+
+for Δti in Δt
+    t, W = brownian_motion(Δti, pars.tmax, pars.nens)
+    xt = map(Wi -> final_solution(linearsde_euler_maruyama!, t, Wi, parsEM), eachcol(W));
+    varerr!(var1, xt)
+    xt = map(Wi -> final_solution(OU_setd1!, t, Wi, pars,+0.0), eachcol(W));
+    varerr!(var2, xt)
+    xt = map(Wi -> final_solution(OU_setd1!, t, Wi, pars,-0.5), eachcol(W));
+    varerr!(var3, xt)
+end
+
+# %%
+function errorscatter!(ax, x, y, dy; kw...)
+    p = scatter!(ax, x, y; kw...)
+    errorbars!(ax, x, y, dy; color=p.color, whiskerwidth=0.8*to_value(p.markersize)[1])
+end
+
+fig, ax = figax(xscale = log2)
+errorscatter!(ax, Δt, var1.m, var1.s, label="Euler")
+errorscatter!(ax, Δt, var2.m, var2.s, label="SETD1")
+errorscatter!(ax, Δt, var3.m, var3.s, label="SETD2")
+lines!(ax, Δt, OU_EMvariance.(pars.k, pars.D, Δt), color=:black)
+lines!(ax, Δt, OU_SETDvariance.(pars.k, pars.D, Δt,+0.0), color=:black)
+lines!(ax, Δt, OU_SETDvariance.(pars.k, pars.D, Δt,-0.5), color=:black)
+axislegend(ax, position=:lt)
+fig
+
+# %%

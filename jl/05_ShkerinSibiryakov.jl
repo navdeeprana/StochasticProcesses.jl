@@ -6,22 +6,23 @@
 #       extension: .jl
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.17.1
+#       jupytext_version: 1.17.2
 #   kernelspec:
-#     display_name: Julia 1.10.9
+#     display_name: sohrab 1.10.10
 #     language: julia
-#     name: julia-1.10
+#     name: sohrab-1.10
 # ---
 
 # %%
 # Imports and setup
 import Pkg;
 Pkg.activate(".");
-using Revise, Printf, CairoMakie, DataFrames, StatsBase, Random, UnPack
+using Revise, Printf, CairoMakie, DataFrames, StatsBase, Random
 includet("src/plotting.jl")
 includet("src/brownian.jl")
-includet("src/etd.jl")
-includet("src/sevector.jl")
+includet("src/etd_factors.jl")
+includet("src/repeated_vector.jl")
+includet("src/sde_algorithms.jl")
 includet("src/oscillator.jl")
 colors = Makie.wong_colors();
 set_theme!(makietheme())
@@ -74,7 +75,7 @@ function oscillator_SS!(x, t, W, p)
 end
 
 # %%
-pars = (; x0 = 0.5, tmax = 10.0, nens = 100, T = 0.1, Γ = 1.0, b = 1.e-1);
+pars = (; x0 = 0.5, tmax = 10.0, nens = 100, T = 0.1, Γ = 1.0, b = 1.e-1, z = 3);
 t, W = brownian_motion(1.e-2, pars.tmax)
 x = zero(W)
 
@@ -91,12 +92,12 @@ function shkerin_sibiryakov_convergence(Δt, p, fhD, frhs, dfrhs)
     function _noise(ϵ, p)
         t, W = brownian_motion(ϵ, p.tmax, 3)
         W = Matrix(W)
-        W[:, 2] .*= sqrt(ϵ^2/12)
-        W[:, 3] .*= sqrt(ϵ^4/720)
+        @. W[:, 2] *= sqrt(ϵ^2/12)
+        @. W[:, 3] *= sqrt(ϵ^4/720)
         return t, W
     end
 
-    @inline _f(x, p, fη, d) = frhs(x, p) + fη * (d[1] + d[2] * dfrhs(x, p) + d[3] * dfrhs(x, p)^2)
+    @inline _f(x, p, fη, d) = @inbounds frhs(x, p) + fη * (d[1] + p.o[2] * d[2] * dfrhs(x, p) + p.o[3] * d[3] * dfrhs(x, p)^2)
 
     function _march(t, W, p, h)
         ϵ, D = fhD(t, p)
@@ -131,25 +132,49 @@ end
 
 # %%
 Random.seed!(314)
-pars = (; x0 = 0.5, tmax = 1.0, nens = 10, T = 1.0, Γ = 1.0, b = 0.e-1);
+# Tweak pars.o for order.
+# Only works for z = 1.0
+pars = (; x0 = 0.5, tmax = 1.0, nens = 50, T = 1.0, Γ = 1.0, b = 1.e-2, o = [1, 1, 1], z = 1.0);
 
-Δt = @. [1.e-6, 1.e-5, 2.e-5, 5.e-5, 1.e-4, 1.e-3, 1.e-2, 1.e-1]
+Δt = [1.e-5, 2.e-5, 4.e-5, 1.e-4, 2.e-4, 4.e-4, 1.e-3, 2.e-3, 4.e-3, 1.e-2, 2.e-2, 4.e-2, 1.e-1]
 
 function oscillator_SS_convergence(Δt, p)
     shkerin_sibiryakov_convergence(
         Δt, p,
         (t, p) -> (t[2] - t[1], p.Γ * p.T),
-        (x, p) -> -p.Γ * (x + p.b * x^3),
-        (x, p) -> -p.Γ * (1 + 3 * p.b * x^2)
+        (x, p) -> -p.Γ * (x + p.b * x^p.z),
+        (x, p) -> -p.Γ * (1 + p.z * p.b * x^(p.z-1))
     )
 end
 es = oscillator_SS_convergence(Δt, pars);
 
 # %%
 fig, ax = figax(xscale = log10, yscale = log10)
-scatterlines!(ax, Δt[2:end], es[2:end])
+scatterlines!(ax, Δt[2:end], es[2:end]; markersize = 20)
 lines!(ax, Δt, Δt .^ 3)
 fig
+
+# %%
+fig, ax = figax(xscale = log10, yscale = log10)
+scatterlines!(ax, Δt[2:end], es[2:end]; markersize = 20)
+pars.o[3] = 0
+@show pars
+es = oscillator_SS_convergence(Δt, pars);
+scatterlines!(ax, Δt[2:end], es[2:end]; markersize = 20)
+pars.o[2] = 0
+@show pars
+es = oscillator_SS_convergence(Δt, pars);
+scatterlines!(ax, Δt[2:end], es[2:end]; markersize = 20)
+lines!(ax, Δt, Δt .^ 1)
+fig
+
+# %%
+using Chairmarks, BenchmarkTools
+Δt = [1.e-2, 2.e-2, 4.e-2, 1.e-1]
+@benchmark oscillator_SS_convergence(Δt, pars)
+
+# %%
+@be oscillator_SS_convergence(Δt, pars)
 
 # %%
 # Stochastic pendulum convergence
@@ -173,7 +198,7 @@ h = 1.e-2
 a, b = symplectic4factors(h)
 p = (; k = 1.0, a, b)
 
-x, v = [1.0], Float64[0.0]
+x, v = [1.0], [0.0]
 for i in 2:1001
     xi, vi = symplectic4(x[i-1], v[i-1], p, (x, p) -> -p.k*x)
     push!(x, xi)
@@ -181,3 +206,5 @@ for i in 2:1001
 end
 E = @. 0.5*(x^2 + v^2)
 println(extrema(E .- 0.5))
+
+# %%

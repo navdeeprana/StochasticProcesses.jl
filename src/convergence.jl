@@ -1,30 +1,24 @@
-function convergence(pars, Δt, sol, XanT, algorithm::F) where {F}
-    N = @. round(Int, prob.p.tmax / Δt)
-    mXanT = mean(XanT)
-    t, W = noise_from_sol(sol)
+function _es_ew!(es, ew, Xan, X)
+    push!(es, mean(@. abs(Xan - X)))
+    push!(ew, abs(mean(Xan) - mean(X)))
+end
+
+function convergence_gbm(pars, algorithm::F) where {F}
+    (; nens, tmax, a, b) = pars
+    Δt = @. 1 / 2^(5:10)
+    t, W = brownian_motion(Δt[end], tmax, nens)
+    XanT = gbm_analytical.(a, b, tmax, collect(W[end, :]))
+    return convergence(pars, Δt, t, W, XanT, algorithm)
+end
+
+function convergence(pars, Δt, t, W, XanT, algorithm::F) where {F}
+    N = @. round(Int, pars.tmax / Δt)
     es, ew = Float64[], Float64[]
     for Ni in N
         skip = (length(t) - 1) ÷ Ni
         @views tn, Wn = t[1:skip:end], W[1:skip:end, :]
         XT = map(Wni -> final_solution(algorithm, tn, Wni, pars), eachcol(Wn))
-        push!(es, mean(@. abs(XanT - XT)))
-        push!(ew, abs(mXanT - mean(XT)))
-    end
-    return (; Δt, N, es, ew)
-end
-
-function convergence_linearsde_dejl(Δt, prob, algorithm)
-    N = @. round(Int, prob.p.tmax / Δt)
-
-    eprob = EnsembleProblem(prob)
-    es, ew = Float64[], Float64[]
-    kw = (; adaptive = false, save_everystep = true, save_noise = true, trajectories = prob.p.nens)
-    for Δti in Δt
-        sol = solve(eprob, algorithm; dt = Δti, kw...)
-        XT = [ui.u[end] for ui in sol.u]
-        XanT = [final_solution(linearsde_analytical!, ui.W.t, ui.W.W, prob.p) for ui in sol.u]
-        push!(es, mean(@. abs(XanT .- XT)))
-        push!(ew, abs(mean(XanT) - mean(XT)))
+        _es_ew!(es, ew, XanT, XT)
     end
     return (; Δt, N, es, ew)
 end

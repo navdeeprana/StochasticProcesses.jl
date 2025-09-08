@@ -6,18 +6,18 @@
 #       extension: .jl
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.17.1
+#       jupytext_version: 1.17.2
 #   kernelspec:
-#     display_name: Julia 1.10.8
+#     display_name: sohrab 1.10.10
 #     language: julia
-#     name: julia-1.10
+#     name: sohrab-1.10
 # ---
 
 # %%
 # Imports and setup
 import Pkg;
 Pkg.activate(".");
-using Revise, Printf, CairoMakie, DataFrames, StatsBase, Random, UnPack
+using Revise, Printf, CairoMakie, DataFrames, StatsBase, Random
 includet("src/plotting.jl")
 includet("src/brownian.jl")
 colors = Makie.wong_colors();
@@ -26,7 +26,7 @@ Random.seed!(42);
 
 # %%
 function density_em(pars, t, W)
-    @unpack μ = pars
+    (; μ) = pars
     Δt = t[2] - t[1]
     ρ = zeros(length(W))
     ρ[1] = 1
@@ -54,7 +54,7 @@ fig
 
 # %%
 function density_transformed_em(pars, t, W)
-    @unpack μ = pars
+    (; μ) = pars
     Δt = t[2] - t[1]
     u = zeros(length(W))
     u[1] = 1
@@ -87,7 +87,7 @@ function noise_dornic!(ρ, λ)
 end
 
 function density_dornic_exact(pars, Δt)
-    @unpack tmax, μ = pars
+    (; tmax, μ) = pars
     λ = 2 / (μ^2 * Δt)
     N = round(Int, tmax / Δt)
     t = Δt .* (0:1:N)
@@ -110,7 +110,7 @@ fig
 
 # %%
 function density_transformed_em_end(pars, Δt)
-    @unpack μ, tmax, nens = pars
+    (; μ, tmax, nens) = pars
     N = round(Int, tmax / Δt)
     u = zeros(nens)
     for n in 1:nens
@@ -129,7 +129,7 @@ function density_transformed_em_end(pars, Δt)
 end
 
 function density_dornic_exact_end(pars, Δt)
-    @unpack μ, tmax, nens = pars
+    (; μ, tmax, nens) = pars
     N = round(Int, tmax / Δt)
     λ = 2 / (μ^2 * Δt)
     ρ = zeros(nens)

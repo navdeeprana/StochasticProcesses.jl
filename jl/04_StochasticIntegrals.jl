@@ -6,18 +6,18 @@
 #       extension: .jl
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.17.1
+#       jupytext_version: 1.17.2
 #   kernelspec:
-#     display_name: Julia 1.10.8
+#     display_name: sohrab 1.10.10
 #     language: julia
-#     name: julia-1.10
+#     name: sohrab-1.10
 # ---
 
 # %%
 # Imports and setup
 import Pkg;
 Pkg.activate(".");
-using Revise, Printf, CairoMakie, DataFrames, StatsBase, Random, UnPack
+using Revise, Printf, CairoMakie, DataFrames, StatsBase, Random
 includet("src/plotting.jl")
 includet("src/brownian.jl")
 colors = Makie.wong_colors();
@@ -56,9 +56,9 @@ N = 2 .^ (4:10)
 
 fig, ax = figax(h = 5, xscale = log2, yscale = log2, xlabel = "N", ylabel = "Δs")
 scatter!(ax, N, Δs1, label = "Left")
-lines!(ax, N, power_law(N, -1, Δs1[1]), color = :black)
+lines!(ax, N, power_law(N, N[1], -1, Δs1[1]), color = :black)
 scatter!(ax, N, Δs2, label = "Midpoint")
-lines!(ax, N, power_law(N, -2, Δs2[1]), color = :black)
+lines!(ax, N, power_law(N, N[1], -2, Δs2[1]), color = :black)
 axislegend(ax, position = :lb)
 fig
 

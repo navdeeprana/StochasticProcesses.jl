@@ -29,15 +29,16 @@ function figax(; nx = 1, ny = 1, h = 5, a = 1.6, s = 100, fontsize = 24, sharex 
 end
 
 # General power law
-power_law(x, p, a) = @. a * (x / x[1])^p
+power_law(x, x0, p, a) = @. a * (x / x0)^p
 
-function plot_convergence(fig, ax, N, es, ew, ps, pw)
-    scatterlines!(ax, N, es, label = "Strong", markersize = 20, linestyle = :dash)
-    scatterlines!(ax, N, ew, label = "Weak", markersize = 20, linestyle = :dash)
-    lines!(ax, N, power_law(N, ps, es[1]), color = :black)
-    lines!(ax, N, power_law(N, pw, ew[1]), color = :red)
-    axislegend(ax, position = :lb)
-    ax.xlabel = "N"
+function plot_convergence(fig, ax, cvg, ps, pw; f = minimum)
+    (; Δt, N, es, ew) = cvg
+    scatterlines!(ax, Δt, es, label = "Strong", markersize = 20, linestyle = :dash)
+    scatterlines!(ax, Δt, ew, label = "Weak", markersize = 20, linestyle = :dash)
+    lines!(ax, Δt, power_law(Δt, f(Δt), ps, f(es)), color = :black)
+    lines!(ax, Δt, power_law(Δt, f(Δt), pw, f(ew)), color = :red)
+    axislegend(ax, position = :rb)
+    ax.xlabel = "Δt"
 end
 
 plot_probability_distribution!(ax, X; bins = 100, kw...) = stephist!(ax, X; normalization = :pdf, bins, kw...)

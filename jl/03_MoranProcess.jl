@@ -6,7 +6,7 @@
 #       extension: .jl
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.17.1
+#       jupytext_version: 1.17.2
 #   kernelspec:
 #     display_name: Julia 1.10.8
 #     language: julia
@@ -17,7 +17,7 @@
 # Imports and setup
 import Pkg;
 Pkg.activate(".");
-using Revise, Printf, CairoMakie, DataFrames, StatsBase, Random, UnPack
+using Revise, Printf, CairoMakie, DataFrames, StatsBase, Random
 includet("src/plotting.jl")
 colors = Makie.wong_colors();
 set_theme!(makietheme())
@@ -47,7 +47,7 @@ fig
 
 # %%
 function moran_process_end(pars, Δt, ρ0, fapprox)
-    @unpack γ, μ, tmax, nens = pars
+    (; γ, μ, tmax, nens) = pars
     N = round(Int, tmax / Δt)
     λ = 2 / (μ^2 * Δt)
     ρ = zeros(nens)
@@ -63,7 +63,7 @@ function moran_process_end(pars, Δt, ρ0, fapprox)
 end
 
 function moran_process_trajectory(pars, Δt, ρ0, fapprox)
-    @unpack γ, μ, tmax, nens = pars
+    (; γ, μ, tmax, nens) = pars
     N = round(Int, tmax / Δt)
     λ = 2 / (μ^2 * Δt)
     ρ = zeros(nens, N)
@@ -146,7 +146,7 @@ fig
 
 # %%
 function moran_process_gillespie_trajectory(pars, NA0)
-    @unpack k1, k2, tmax, N = pars
+    (; k1, k2, tmax, N) = pars
     t, Z = Float64[], Int[]
     tnow, nAnow = 0.0, NA0
     @inbounds while (tnow < tmax) && (0 <= nAnow <= N)
@@ -161,7 +161,7 @@ function moran_process_gillespie_trajectory(pars, NA0)
 end
 
 function moran_process_gillespie_end(pars, NA0)
-    @unpack k1, k2, nens, tmax, N, tmax = pars
+    (; k1, k2, nens, tmax, N, tmax) = pars
     t, Z = zeros(nens), zeros(Int, nens)
     for n in 1:nens
         tnow, nAnow = 0.0, NA0

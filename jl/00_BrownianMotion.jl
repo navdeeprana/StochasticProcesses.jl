@@ -6,18 +6,18 @@
 #       extension: .jl
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.17.1
+#       jupytext_version: 1.17.2
 #   kernelspec:
-#     display_name: Julia 1.10.9
+#     display_name: sohrab 1.10.10
 #     language: julia
-#     name: julia-1.10
+#     name: sohrab-1.10
 # ---
 
 # %%
 # Imports and setup
 import Pkg;
 Pkg.activate(".");
-using Revise, Printf, CairoMakie, DataFrames, StatsBase, Random, UnPack
+using Revise, Printf, CairoMakie, DataFrames, StatsBase, Random
 includet("src/plotting.jl")
 includet("src/brownian.jl")
 colors = Makie.wong_colors();

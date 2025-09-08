@@ -1,25 +1,26 @@
-oscillator_EM!(x, t, W, p) = euler_maruyama!(
-    x, t, W, p,
-    (x, p) -> -p.Γ * (x + p.b * x^p.z),
-    (x, p) -> sqrt(2*p.Γ*p.T)
-)
+function oscillator_EM!(x, t, W, p)
+    euler_maruyama!(
+        x, t, W, p,
+        (x0, p) -> -p.Γ * (x0 + p.b * x0^p.z),
+        (x0, p) -> sqrt(2*p.Γ*p.T)
+    )
+end
 
 oscillator_setd1!(x, t, W, p) = setd1!(
     x, t, W, p,
     p -> (-p.Γ, p.Γ * p.T),
-    (x, p) -> -p.Γ * p.b * x^p.z,
-    (x, p) -> 1
+    (x0, p) -> -p.Γ * p.b * x0^p.z
 )
 
 function etd2rk_factors_oscillator(h, pars)
-    @unpack Γ, b, T = pars
+    (; Γ, b, T) = pars
     c, D = -Γ, Γ * T
     f = etd2rk_factors(h, c)
     return (f[1], -Γ * b * f[2], -Γ * b * f[3], etd_stochastic(h, c, D))
 end
 
 function oscillator_euler_ensemble(pars, Δt)
-    @unpack nens, tmax, Γ, b, T, z = pars
+    (; nens, tmax, Γ, b, T, z) = pars
     iters = round(Int, tmax / Δt)
     fη = sqrt(2 * Γ * T * Δt)
     x, η = fill(pars.x0, nens), zeros(nens)
@@ -31,7 +32,7 @@ function oscillator_euler_ensemble(pars, Δt)
 end
 
 function oscillator_etd1_ensemble(pars, Δt)
-    @unpack nens, tmax, Γ, b, T, z = pars
+    (; nens, tmax, Γ, b, T, z) = pars
     iters = round(Int, tmax / Δt)
     c, h, D = -pars.Γ, Δt, pars.Γ * pars.T
     f = (etd1_factors(h, c)..., etd_stochastic(h, c, D))
@@ -44,7 +45,7 @@ function oscillator_etd1_ensemble(pars, Δt)
 end
 
 function auxvars(t, pars)
-    @unpack Γ, b, T, z = pars
+    (; Γ, b, T, z) = pars
     Δt = t[2] - t[1]
     fη = sqrt(2 * pars.Γ * pars.T * Δt)
     return Γ, b, T, z, Δt, fη
