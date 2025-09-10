@@ -9,7 +9,8 @@ end
 oscillator_setd1!(x, t, W, p) = setd1!(
     x, t, W, p,
     p -> (-p.Γ, p.Γ * p.T),
-    (x0, p) -> -p.Γ * p.b * x0^p.z
+    (x0, p) -> -p.Γ * p.b * x0^p.z,
+    (x0, p) -> 1
 )
 
 function etd2rk_factors_oscillator(h, pars)

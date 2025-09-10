@@ -192,7 +192,7 @@ f(u, p, t) = (2 * u / (1 + t) + p.b * (1 + t)^2)
 g(u, p, t) = p.b * (1 + t)^2
 u_analytic(u0, p, t, W) = u0 * (1 + t)^2 + p.b * (1 + t)^2 * (t + W)
 
-pars = (b = 1.0, u0 = 1.0, tmax = 1.0, nens=1000)
+pars = (b = 1.0, u0 = 1.0, tmax = 1.0, nens = 1000)
 
 func = SDEFunction(f, g, analytic = u_analytic)
 prob = SDEProblem(func, pars.u0, (0.0, pars.tmax), pars)
@@ -209,7 +209,7 @@ fig
 # %%
 cvg = (
     EM = convergence_dejl(prob, EM()),
-    SRIW1 = convergence_dejl(prob, SRIW1()),
+    SRIW1 = convergence_dejl(prob, SRIW1())
 );
 
 # %%
@@ -252,12 +252,12 @@ cvg = (
     Euler = convergence_dejl_methods(prob, Euler()),
     Midpoint = convergence_dejl_methods(prob, Midpoint()),
     AB3 = convergence_dejl_methods(prob, AB3()),
-    KenCarp3 = convergence_dejl_methods(prob, KenCarp3()),
+    KenCarp3 = convergence_dejl_methods(prob, KenCarp3())
 );
 
 # %%
 fig, ax = figax(h = 5, xscale = log2, yscale = log2)
-for (k,v) in pairs(cvg)
+for (k, v) in pairs(cvg)
     scatterlines!(ax, v.Δt, v.es; label = String(k), markersize = 20)
 end
 axislegend(position = :rb)

@@ -75,10 +75,20 @@ function setd1!(x, t, W, p, fcD::FCD, f::F, g::G) where {FCD,F,G}
     nothing
 end
 
-function final_solution(algo::F, args...; kwargs...) where {F}
-    x = RepeatedVector()
-    algo(x, args...; kwargs...)
-    return x.v[1]
+function setd1_milstein!(x, t, W, p, fcD::FCD, f::F, g::G, dg::DG) where {FCD,F,G,DG}
+    h = t[2] - t[1]
+    c, D = fcD(p)
+    fac = (exp(c*h), expm1(c*h)/c)
+    x[1] = p.x0
+    @inbounds for i in 2:length(W)
+        x0, dW = x[i-1], (W[i] - W[i-1])
+        x[i] = (
+            fac[1] * x0 + fac[2] * f(x0, p)
+            + g(x0, p) * exp(c*h/2) * dW
+            + 0.5 * g(x0, p) * dg(x0, p) * ((W[i]-exp(c*h/2)*W[i-1])^2-fac[2])
+        )
+    end
+    nothing
 end
 
 linearsde_euler_maruyama!(x, t, W, p) = euler_maruyama!(
@@ -102,12 +112,6 @@ function gbm_euler_maruyama!(X, t, W, p)
     )
 end
 
-function gbm_euler_maruyama(t, W, p)
-    X = zero(W)
-    gbm_euler_maruyama!(X, t, W, p)
-    return X
-end
-
 function gbm_milstein!(X, t, W, p)
     milstein!(
         X, t, W, p,
@@ -126,8 +130,24 @@ function gbm_setd1!(X, t, W, p)
     )
 end
 
-function gbm_setd1(t, W, p)
-    X = zero(W)
-    gbm_setd1!(X, t, W, p)
-    return X
+function gbm_setd1_milstein!(X, t, W, p)
+    setd1_milstein!(
+        X, t, W, p,
+        p -> (p.a-p.δ, p.b^2/2),
+        (x0, p) -> p.δ*x0,
+        (x0, p) -> p.b*x0,
+        (x0, p) -> p.b
+    )
+end
+
+function algorithm_trajectory(algorithm, t, W, p)
+    x = zero(W)
+    algorithm(x, t, W, p)
+    return x
+end
+
+function final_solution(algorithm::F, args...; kwargs...) where {F}
+    x = RepeatedVector()
+    algorithm(x, args...; kwargs...)
+    return x.v[1]
 end
