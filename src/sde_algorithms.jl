@@ -62,15 +62,15 @@ function milstein!(x, t, W, p, f::F, g::G, dg::DG) where {F,G,DG}
 end
 
 # SETDs require du = cu + f(u,t) + sqrt(2D) g(u,t) dW form.
+
 function setd1!(x, t, W, p, fcD::FCD, f::F, g::G) where {FCD,F,G}
     h = t[2] - t[1]
     c, D = fcD(p)
-    # Take care of the sqrt(h) scaling
-    fac = (etd1_factors(h, c)..., etd_stochastic(h, c, D)/sqrt(h))
+    fac = (exp(c*h), expm1(c*h)/c)
     x[1] = p.x0
     @inbounds for i in 2:length(W)
         x0, dW = x[i-1], W[i] - W[i-1]
-        x[i] = fac[1] * x0 + fac[2] * f(x0, p) + fac[3] * g(x0, p) * dW
+        x[i] = fac[1] * x0 + fac[2] * f(x0, p) + fac[1] * g(x0, p) * dW
     end
     nothing
 end
@@ -81,11 +81,10 @@ function setd1_milstein!(x, t, W, p, fcD::FCD, f::F, g::G, dg::DG) where {FCD,F,
     fac = (exp(c*h), expm1(c*h)/c)
     x[1] = p.x0
     @inbounds for i in 2:length(W)
-        x0, dW = x[i-1], (W[i] - W[i-1])
+        x0, dW = x[i-1], W[i] - W[i-1]
         x[i] = (
             fac[1] * x0 + fac[2] * f(x0, p)
-            + g(x0, p) * exp(c*h/2) * dW
-            + 0.5 * g(x0, p) * dg(x0, p) * ((W[i]-exp(c*h/2)*W[i-1])^2-fac[2])
+            + fac[1] * g(x0, p) * (dW + 0.5 * dg(x0, p) * (dW^2-fac[2]))
         )
     end
     nothing

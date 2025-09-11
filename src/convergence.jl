@@ -3,15 +3,15 @@ function _es_ew!(es, ew, Xan, X)
     push!(ew, abs(mean(Xan) - mean(X)))
 end
 
-function convergence_gbm(pars, algorithm::F) where {F}
+function convergence_gbm(pars, algorithm::F; kw...) where {F}
     (; nens, tmax, a, b) = pars
     Δt = @. 1 / 2^(5:10)
     t, W = brownian_motion(Δt[end], tmax, nens)
     XanT = gbm_analytical.(a, b, tmax, collect(W[end, :]))
-    return convergence(pars, Δt, t, W, XanT, algorithm)
+    return convergence(pars, Δt, t, W, XanT, algorithm; kw...)
 end
 
-function convergence(pars, Δt, t, W, XanT, algorithm::F) where {F}
+function convergence(pars, Δt, t, W, XanT, algorithm::F; kw...) where {F}
     N = @. round(Int, pars.tmax / Δt)
     es, ew = Float64[], Float64[]
     for Ni in N
