@@ -61,30 +61,42 @@ function milstein!(x, t, W, p, f::F, g::G, dg::DG) where {F,G,DG}
     nothing
 end
 
-# SETDs require du = cu + f(u,t) + sqrt(2D) g(u,t) dW form.
+# SETDs require du = cu + f(u,t) + g(u,t) dW form.
 
-function setd1!(x, t, W, p, fcD::FCD, f::F, g::G) where {FCD,F,G}
+function setd1!(x, t, W, p, fc::FC, f::F, g::G) where {FC,F,G}
     h = t[2] - t[1]
-    c, D = fcD(p)
-    fac = (exp(c*h), expm1(c*h)/c)
+    c = fc(p)
+    fac = (exp(c*h), expm1(c*h)/c, sqrt(expm1(2*c*h)/(2c))/sqrt(h))
     x[1] = p.x0
     @inbounds for i in 2:length(W)
         x0, dW = x[i-1], W[i] - W[i-1]
-        x[i] = fac[1] * x0 + fac[2] * f(x0, p) + fac[1] * g(x0, p) * dW
+        x[i] = fac[1] * x0 + fac[2] * f(x0, p) + fac[3] * g(x0, p) * dW
     end
     nothing
 end
 
-function setd1_milstein!(x, t, W, p, fcD::FCD, f::F, g::G, dg::DG) where {FCD,F,G,DG}
+function setd_em!(x, t, W, p, fc::FC, f::F, g::G) where {FC,F,G}
     h = t[2] - t[1]
-    c, D = fcD(p)
-    fac = (exp(c*h), expm1(c*h)/c)
+    c = fc(p)
+    fac = (exp(c*h), expm1(c*h)/c, exp(c*h/2))
+    x[1] = p.x0
+    @inbounds for i in 2:length(W)
+        x0, dW = x[i-1], W[i] - W[i-1]
+        x[i] = fac[1] * x0 + fac[2] * f(x0, p) + fac[3] * g(x0, p) * dW
+    end
+    nothing
+end
+
+function setd1_milstein!(x, t, W, p, fc::FC, f::F, g::G, dg::DG) where {FC,F,G,DG}
+    h = t[2] - t[1]
+    c = fc(p)
+    fac = (exp(c*h), expm1(c*h)/c, exp(c*h/2))
     x[1] = p.x0
     @inbounds for i in 2:length(W)
         x0, dW = x[i-1], W[i] - W[i-1]
         x[i] = (
             fac[1] * x0 + fac[2] * f(x0, p)
-            + fac[1] * g(x0, p) * (dW + 0.5 * dg(x0, p) * (dW^2-fac[2]))
+            + fac[3] * g(x0, p) * (dW + 0.5 * dg(x0, p) * (dW^2-h))
         )
     end
     nothing
@@ -98,9 +110,9 @@ linearsde_euler_maruyama!(x, t, W, p) = euler_maruyama!(
 
 linearsde_setd1!(x, t, W, p) = setd1!(
     x, t, W, p,
-    p -> (p.a, p.c^2/2),
+    p -> p.a,
     (x, p) -> p.b,
-    (x, p) -> 1
+    (x, p) -> p.c
 )
 
 function gbm_euler_maruyama!(X, t, W, p)
@@ -123,16 +135,16 @@ end
 function gbm_setd1!(X, t, W, p)
     setd1!(
         X, t, W, p,
-        p -> (p.a-p.δ, p.b^2/2),
+        p -> p.a-p.δ,
         (x0, p) -> p.δ*x0,
-        (x0, p) -> x0
+        (x0, p) -> p.b*x0
     )
 end
 
 function gbm_setd1_milstein!(X, t, W, p)
     setd1_milstein!(
         X, t, W, p,
-        p -> (p.a-p.δ, p.b^2/2),
+        p -> p.a-p.δ,
         (x0, p) -> p.δ*x0,
         (x0, p) -> p.b*x0,
         (x0, p) -> p.b

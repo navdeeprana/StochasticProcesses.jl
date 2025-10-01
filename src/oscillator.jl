@@ -6,12 +6,14 @@ function oscillator_EM!(x, t, W, p)
     )
 end
 
-oscillator_setd1!(x, t, W, p) = setd1!(
-    x, t, W, p,
-    p -> (-p.Γ, p.Γ * p.T),
-    (x0, p) -> -p.Γ * p.b * x0^p.z,
-    (x0, p) -> 1
-)
+function oscillator_setd1!(x, t, W, p)
+    setd1!(
+        x, t, W, p,
+        p -> -p.Γ,
+        (x0, p) -> -p.Γ * p.b * x0^p.z,
+        (x0, p) -> sqrt(2*p.Γ*p.T)
+    )
+end
 
 function etd2rk_factors_oscillator(h, pars)
     (; Γ, b, T) = pars

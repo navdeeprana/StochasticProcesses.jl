@@ -12,9 +12,10 @@ RepeatedVector(val::T) where {T} = RepeatedVector{T}([val])
 RepeatedVector() = RepeatedVector(0.0)
 
 Base.getindex(x::RepeatedVector, i) = @inbounds x.v[1]
-Base.setindex!(x::RepeatedVector, b, i) = @inbounds x.v[1] = b
-Base.lastindex(x::RepeatedVector) = 1
+Base.setindex!(x::RepeatedVector{T}, val::T, i) where {T} = @inbounds x.v[1] = val
+Base.push!(x::RepeatedVector{T}, val::T) where {T} = x.v[1] = val
 
+Base.lastindex(x::RepeatedVector) = typemax(Int)
 Base.length(x::RepeatedVector) = typemax(Int)
 Base.size(x::RepeatedVector) = (typemax(Int),)
 

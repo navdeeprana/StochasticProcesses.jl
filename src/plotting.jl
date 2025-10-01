@@ -41,7 +41,7 @@ function plot_convergence(fig, ax, cvg, ps, pw; f = minimum)
     ax.xlabel = "Δt"
 end
 
-plot_probability_distribution!(ax, X; bins = 100, kw...) = stephist!(ax, X; normalization = :pdf, bins, kw...)
+plot_probability_distribution!(ax, X; bins = 256, kw...) = stephist!(ax, X; normalization = :pdf, bins, kw...)
 
 function plot_normal_distribution!(ax, xm; μ = 0.0, σ = 1.0, kw...)
     x = LinRange(-xm, xm, 1000)

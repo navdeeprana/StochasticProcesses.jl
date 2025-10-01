@@ -4,7 +4,7 @@ KERNEL_NAME := sohrab-1.10
 IPYNB := $(wildcard *.ipynb)
 JULIA_TRACKED := $(wildcard jl/*.jl)
 
-.PHONY: scripts, format, formatsrc, formatnb, notebooks, execute
+.PHONY: scripts, format, formatsrc, formatnb, notebooks, execute, clean
 
 help: ## Show available targets
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  %-12s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -28,3 +28,6 @@ notebooks: $(JULIA_TRACKED) ## Convert all julia files to notebooks for working
 execute: $(IPYNB) ## Run all notebooks
 	@for f in $(IPYNB); do echo "Executing $$f"; \
 		jupyter nbconvert --to notebook --execute --inplace --ExecutePreprocessor.kernel_name=$(KERNEL_NAME) $$f; done
+
+clean:
+	@find . -name ".ipynb_check*" -exec rm -r {} \;
