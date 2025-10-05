@@ -28,6 +28,11 @@ function figax(; nx = 1, ny = 1, h = 5, a = 1.6, s = 100, fontsize = 24, sharex 
     return fig, ax
 end
 
+function errorscatter!(ax, x, y, dy; kw...)
+    p = scatter!(ax, x, y; kw...)
+    errorbars!(ax, x, y, dy; color = p.color, whiskerwidth = 0.5*to_value(p.markersize)[1])
+end
+
 # General power law
 power_law(x, x0, p, a) = @. a * (x / x0)^p
 
