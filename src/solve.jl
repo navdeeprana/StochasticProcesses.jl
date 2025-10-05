@@ -3,86 +3,69 @@ struct EulerMaruyama <: AbstractNumericalMethod end
 struct Milstein <: AbstractNumericalMethod end
 struct SETDEulerMaruyama <: AbstractNumericalMethod end
 struct SETDMilstein <: AbstractNumericalMethod end
+struct SETD1 <: AbstractNumericalMethod end
 
-struct Integrator{M,Q}
+struct Integrator{M<:AbstractNumericalMethod,Q}
     m::M # Integration method
     q::Q # Contains fixed parameters for the integration method.
 end
-Integrator(m::M, q) where {M<:AbstractNumericalMethod} = Integrator{M,typeof(q)}(m, q)
 
-function EulerMaruyama(h)
-    q = (h = h, sqrth = sqrt(h))
-    Integrator(EulerMaruyama(), q)
-end
+EulerMaruyama(h) = Integrator(EulerMaruyama(), (h = h, sqrth = sqrt(h)))
 
-function Milstein(h)
-    q = (h = h, sqrth = sqrt(h))
-    Integrator(Milstein(), q)
-end
+Milstein(h) = Integrator(Milstein(), (h = h, sqrth = sqrt(h)))
 
 # For left-point approximation, approx = 1.0 and for mid-point approximation, approx = 0.5.
 # By default we choose mid-point approximation as it is more accurate.
 
-function SETDEulerMaruyama(h, c, approx)
+function SETDEulerMaruyama(h, c, approx=0.5)
     fac = (exp(c*h), expm1(c*h)/c, exp(c*h*approx))
-    q = (; h, sqrth = sqrt(h), fac)
-    Integrator(SETDEulerMaruyama(), q)
+    Integrator(SETDEulerMaruyama(), (; h, sqrth = sqrt(h), fac))
 end
-SETDEulerMaruyama(h, c) = SETDEulerMaruyama(h, c, 0.5)
 
-# SETD1 is essentially an SETDEulerMaruyama type integrator, but with a different value
-# of the stochastic integral.
+function SETDMilstein(h, c, approx=0.5)
+    fac = (exp(c*h), expm1(c*h)/c, exp(c*h*approx))
+    Integrator(SETDMilstein(), (; h, sqrth = sqrt(h), fac))
+end
+
 function SETD1(h, c)
     fac = (exp(c*h), expm1(c*h)/c, sqrt(expm1(2*c*h)/(2c))/sqrt(h))
-    q = (; h, sqrth = sqrt(h), fac)
-    Integrator(SETDEulerMaruyama(), q)
+    Integrator(SETD1(), (; h, sqrth = sqrt(h), fac))
 end
 
-function SETDMilstein(h, c, approx)
-    fac = (exp(c*h), expm1(c*h)/c, exp(c*h*approx))
-    q = (; h, sqrth = sqrt(h), fac)
-    Integrator(SETDMilstein(), q)
-end
-SETDMilstein(h, c) = SETDMilstein(h, c, 0.5)
-
-struct SODE{F,G,DG,P}
-    f::F
-    g::G
-    dg::DG
+struct SODE{U,P}
+    f::Function
+    g::Function
+    dg::Function
     p::P
 end
 
-stepforward(int::Integrator, sde::SODE, u0, dW) = stepforward(int.m, int.q, sde, u0, dW)
+stepforward(int::Integrator, s::SODE, u0, dW) = stepforward(int.m, int.q, s, u0, dW)
 
-function stepforward(::EulerMaruyama, q, sde::SODE, u0, dW)
-    (; f, g, p) = sde
-    xn = u0 + q.h * f(u0, p) + g(u0, p) * dW
-    return xn
+function stepforward(::EulerMaruyama, q, s::SODE, u0, dW)
+    return u0 + q.h * s.f(u0, s.p) + s.g(u0, s.p) * dW
 end
 
-function stepforward(::Milstein, q, sde::SODE, u0, dW)
-    (; f, g, dg, p) = sde
-    xn = (
-        u0 + q.h * f(u0, p)
-        + g(u0, p) * (dW + 0.5 * dg(u0, p) * (dW^2-q.h))
+function stepforward(::Milstein, q, s::SODE, u0, dW)
+    return (
+        u0 + q.h * s.f(u0, s.p)
+        + s.g(u0, s.p) * (dW + 0.5 * s.dg(u0, s.p) * (dW^2-q.h))
     )
-    return xn
 end
 
-function stepforward(::SETDEulerMaruyama, q, sde::SODE, u0, dW)
-    (; f, g, p) = sde
-    xn = q.fac[1] * u0 + q.fac[2] * f(u0, p) + q.fac[3] * g(u0, p) * dW
-    return xn
+function stepforward(::SETDEulerMaruyama, q, s::SODE, u0, dW)
+    return q.fac[1] * u0 + q.fac[2] * s.f(u0, s.p) + q.fac[3] * s.g(u0, s.p) * dW
 end
 
-function stepforward(::SETDMilstein, q, sde::SODE, u0, dW)
-    (; f, g, dg, p) = sde
-    xn = (
+function stepforward(::SETDMilstein, q, s::SODE, u0, dW)
+    return (
         q.fac[1] * u0
-        + q.fac[2] * f(u0, p)
-        + q.fac[3] * g(u0, p) * (dW + 0.5 * dg(u0, p) * (dW^2 - q.h))
+        + q.fac[2] * s.f(u0, s.p)
+        + q.fac[3] * s.g(u0, s.p) * (dW + 0.5 * s.dg(u0, s.p) * (dW^2 - q.h))
     )
-    return xn
+end
+
+function stepforward(::SETD1, q, s::SODE, u0, dW)
+    return q.fac[1] * u0 + q.fac[2] * s.f(u0, s.p) + q.fac[3] * s.g(u0, s.p) * dW
 end
 
 abstract type AbstractWeinerIncrement end
