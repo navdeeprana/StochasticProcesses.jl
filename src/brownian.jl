@@ -24,6 +24,12 @@ function weiner_process(h, tmax, nens)
     return t, df
 end
 
+function tnWn(t, W, twhen)
+    skip = (length(t) - 1) ÷ round(Int, t[end] / twhen)
+    @views tn, Wn = t[1:skip:end], W[1:skip:end, :]
+    return tn, Wn
+end
+
 abstract type AbstractWeinerIncrement end
 
 struct InstantWeinerIncrement{T} <: AbstractWeinerIncrement

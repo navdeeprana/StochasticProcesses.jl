@@ -27,39 +27,40 @@ function SETDMilstein(h, c, approx = 0.5)
     Integrator(SETDMilstein(), (; h, sqrth = sqrt(h), fac))
 end
 
+# Since these integrators operate on Weiner increments, and not directly on the random
+# numbers, we need to scale the stochastic integral by sqrt(h). Technically SETD1 should
+# only operate on InstantWeinerIncrement, but we leave it this way.
 function SETD1(h, c)
-    # Since these integrators operate on Weiner increments, and not directly on the random
-    # numbers, we need to scale the stochastic integral by sqrt(h). Technically SETD1 should
-    # only operate on InstantWeinerIncrement, but we leave it this way.
     fac = (exp(c*h), expm1(c*h)/c, sqrt(expm1(2*c*h)/(2c))/sqrt(h))
     Integrator(SETD1(), (; h, sqrth = sqrt(h), fac))
 end
 
-struct SODE{F,G,DG,P}
+# Define a SDE du = f(u,p) + g(u,p) dW, where dg  = ∂g/∂u.
+struct SDE{F,G,DG,P}
     f::F
     g::G
     dg::DG
     p::P
 end
 
-stepforward(int::Integrator, s::SODE, u0, dW) = stepforward(int.m, int.q, s, u0, dW)
+stepforward(int::Integrator, s::SDE, u0, dW) = stepforward(int.m, int.q, s, u0, dW)
 
-function stepforward(::EulerMaruyama, q, s::SODE, u0, dW)
+function stepforward(::EulerMaruyama, q, s::SDE, u0, dW)
     return u0 + q.h * s.f(u0, s.p) + s.g(u0, s.p) * dW
 end
 
-function stepforward(::Milstein, q, s::SODE, u0, dW)
+function stepforward(::Milstein, q, s::SDE, u0, dW)
     return (
         u0 + q.h * s.f(u0, s.p)
         + s.g(u0, s.p) * (dW + 0.5 * s.dg(u0, s.p) * (dW^2-q.h))
     )
 end
 
-function stepforward(::SETDEulerMaruyama, q, s::SODE, u0, dW)
+function stepforward(::SETDEulerMaruyama, q, s::SDE, u0, dW)
     return q.fac[1] * u0 + q.fac[2] * s.f(u0, s.p) + q.fac[3] * s.g(u0, s.p) * dW
 end
 
-function stepforward(::SETDMilstein, q, s::SODE, u0, dW)
+function stepforward(::SETDMilstein, q, s::SDE, u0, dW)
     return (
         q.fac[1] * u0
         + q.fac[2] * s.f(u0, s.p)
@@ -67,11 +68,11 @@ function stepforward(::SETDMilstein, q, s::SODE, u0, dW)
     )
 end
 
-function stepforward(::SETD1, q, s::SODE, u0, dW)
+function stepforward(::SETD1, q, s::SDE, u0, dW)
     return q.fac[1] * u0 + q.fac[2] * s.f(u0, s.p) + q.fac[3] * s.g(u0, s.p) * dW
 end
 
-function solve(s::SODE, int::Integrator, dW::AbstractWeinerIncrement, u0, tmax, saveat; save_after = 0.0)
+function solve(s::SDE, int::Integrator, dW::AbstractWeinerIncrement, u0, tmax, saveat; save_after = 0.0)
     (; h, sqrth) = int.q
     niters, nsave = @. round(Int, (tmax, saveat)/h)
     sol = (; t = Float64[], u = Float64[])
