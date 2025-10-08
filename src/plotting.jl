@@ -1,16 +1,22 @@
 # Create a makie theme for plotting.
 function makietheme()
-    Theme(
-        fontsize = 10,
+    return Theme(
+        fontsize = 25,
         Axis = (
             backgroundcolor = :transparent,
             xgridvisible = false,
             ygridvisible = false,
             xlabelpadding = 3,
             ylabelpadding = 3,
+            xtickalign = 1,
+            ytickalign = 1,
+            xminorticksvisible = true,
+            yminorticksvisible = true,
+            xminortickalign = 1,
+            yminortickalign = 1,
             titlefont = :regular
         ),
-        Lines = (linewidth = 2.0,),
+        Lines = (linewidth = 3.0,),
         Scatter = (markersize = 20,)
     )
 end
