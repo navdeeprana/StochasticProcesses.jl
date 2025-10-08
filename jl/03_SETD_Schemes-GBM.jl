@@ -20,31 +20,26 @@ Pkg.activate(".");
 using Revise, Printf, MathTeXEngine, CairoMakie, DataFrames, StatsBase, Random
 includet("src/plotting.jl")
 includet("src/brownian.jl")
-includet("src/repeated_vector.jl")
-includet("src/etd_factors.jl")
-includet("src/sde_algorithms.jl")
-includet("src/convergence.jl")
-includet("src/oscillator.jl")
+includet("src/sde_examples.jl")
+includet("src/solve.jl")
 colors = Makie.wong_colors();
-set_theme!(makietheme())
-CairoMakie.enable_only_mime!("html", "svg")
+set_theme!(merge(theme_latexfonts(), makietheme()))
+CairoMakie.enable_only_mime!("html")
 Random.seed!(42);
 
 # %%
-includet("src/solve.jl")
-
 function GBM(p)
     f(u, p) = p.a * u
     g(u, p) = p.b * u
     dg(u, p) = p.b
-    return SODE{typeof(f),typeof(g),typeof(dg),typeof(p)}(f, g, dg, p)
+    return SDE(f, g, dg, p)
 end
 
 function GBM_SETD(p)
     f(u, p) = p.δ * u
     g(u, p) = p.b * u
     dg(u, p) = p.b
-    return SODE{typeof(f),typeof(g),typeof(dg),typeof(p)}(f, g, dg, p)
+    return SDE(f, g, dg, p)
 end
 
 GBM_ANALYTICAL(p, t, W) = (; t, u = gbm_analytical.(p.u0, p.a, p.b, t, W))
@@ -83,33 +78,34 @@ end
 
 # %%
 n=10
-fig, axes = figax(nx = 3, yscale = log10, xlabel = "t")
+fig, axes = figax(nx = 3, xlabel = L"t")
 ax = axes[1]
 ax.title="GBM trajectories"
-ax.ylabel="u(t)"
+ax.ylabel=L"u(t)"
 _plot_sol!(ax, sol_em, n; color = colors[1], label = "EM")
 _plot_sol!(ax, sol_ml, n; color = colors[2], label = "Milstein")
 _plot_sol!(ax, sol_an, n; color = (:black, 0.9), label = "Analytical")
 
 ax = axes[2]
 ax.title="GBM trajectories"
-ax.ylabel="u(t)"
-_plot_sol!(ax, sol_ea, n; color = colors[3], label = "SETD EM")
-_plot_sol!(ax, sol_eb, n; color = colors[4], label = "SETD Milstein")
+ax.ylabel=L"u(t)"
+_plot_sol!(ax, sol_ea, n; color = colors[3], label = "SETD-EM")
+_plot_sol!(ax, sol_eb, n; color = colors[4], label = "SETD-Milstein")
 _plot_sol!(ax, sol_an, n; color = (:black, 0.9), label = "Analytical")
 
 ax = axes[3]
 ax.limits = (nothing, nothing, 1.e-2, 1.e+2)
+ax.yscale = log10
 ax.title="RMS error with time"
-ax.ylabel="Δ(t)"
+ax.ylabel=L"\Delta(t)"
 _plot_rms_error!(ax, sol_em, sol_an, label = "EM")
 _plot_rms_error!(ax, sol_ml, sol_an, label = "Milstein")
-_plot_rms_error!(ax, sol_ea, sol_an, label = "SETD EM")
-_plot_rms_error!(ax, sol_eb, sol_an, label = "SETD Milstein")
+_plot_rms_error!(ax, sol_ea, sol_an, label = "SETD-EM")
+_plot_rms_error!(ax, sol_eb, sol_an, label = "SETD-Milstein")
 
-axislegend(axes[1], position = :lb)
-axislegend(axes[2], position = :lb)
-axislegend(axes[3], position = :rb)
+axislegend(axes[1], position = :lb, nbanks = 3)
+axislegend(axes[2], position = :lb, nbanks = 3)
+axislegend(axes[3], position = :rb, nbanks = 2)
 resize_to_layout!(fig)
 save("figs/GBM_algorithm_comparison.pdf", fig)
 fig
@@ -162,23 +158,24 @@ cvg2 = (
 # %%
 function plot_convergence(fig, ax1, ax2, cvg; kwargs...)
     g = groupby(cvg, :t)[end]
-    (; h, es, ew, ew_an, ci) = g
+    (; h, es, ew, ew_an) = g
     kw = (markersize = 25, linestyle = :dash, linewidth = 3)
     scatterlines!(ax1, h, es; kw..., kwargs...)
     scatterlines!(ax2, h, ew; kw..., kwargs...)
 end
 
 # %%
-fig, axes = figax(nx = 2, ny = 2, xscale = log2, yscale = log10, xlabel = "h")
-axes[1].title = "Strong convergence for SETD EM"
-axes[2].title = "Weak convergence for SETD EM"
-axes[3].title = "Strong convergence for SETD Milstein"
-axes[4].title = "Weak convergence for SETD Milstein"
+fig, axes = figax(nx = 2, ny = 2, xscale = log2, yscale = log2, xlabel = L"h")
+axes[1].title = "Strong convergence for SETD-EM"
+axes[2].title = "Weak convergence for SETD-EM"
+axes[3].title = "Strong convergence for SETD-Milstein"
+axes[4].title = "Weak convergence for SETD-Milstein"
 plot_convergence(fig, axes[1], axes[2], cvg1.etdem, marker = :circle, label = L"$\delta = 0.5$")
 plot_convergence(fig, axes[1], axes[2], cvg2.etdem, marker = :rect, label = L"\delta = 1.0")
-plot_convergence(fig, axes[3], axes[4], cvg1.etdml, marker = :circle, label = L"δ = 0.5")
-plot_convergence(fig, axes[3], axes[4], cvg2.etdml, marker = :rect, label = L"δ = 1.0")
-for (ax, a, n, text, yf) in zip(axes, [3, 2.5, 4, 4], [0.5, 1.0, 1.0, 1.0], [L"h^{1/2}", L"h", L"h", L"h"], [0.75, 0.55, 0.55, 0.55])
+plot_convergence(fig, axes[3], axes[4], cvg1.etdml, marker = :circle, label = L"\delta = 0.5")
+plot_convergence(fig, axes[3], axes[4], cvg2.etdml, marker = :rect, label = L"\delta = 1.0")
+# axes[3].yticks = @. 2^(-8:-2:-2)
+for (ax, a, n, text, yf) in zip(axes, [3, 2.5, 5, 2.5], [0.5, 1.0, 1.0, 1.0], [L"h^{1/2}", L"h", L"h", L"h"], [0.75, 0.55, 0.55, 0.55])
     lines!(ax, h_cvg, (@. a * h_cvg^n), linewidth = 3, color = :black)
     x = (h_cvg[3] + h_cvg[4])/2
     text!(ax, x, yf*a*(x^n); text, fontsize = 30)
@@ -194,6 +191,7 @@ fig
 # %%
 dt = 1.e-2
 p_rest = (u0 = 1.0, tmax = 3.0, a = -3.0, b = sqrt(2.0), δ = 0.5, nens = 10000)
+p = (; dt = dt, p_rest...)
 t, W = brownian_motion(dt, p.tmax, p.nens);
 uvar = gbm_var.(p.u0, p.a, p.b, t);
 uan = map(Wi -> gbm_analytical.(p.u0, p.a, p.b, t, Wi), eachcol(W));
@@ -212,27 +210,6 @@ function isSETDEMstableforGBM(p, h)
     c = a - δ
     return (exp(c*h) + (δ/c)*(exp(c*h)-1))^2 + h*(b*exp(c*h))^2 < 1
 end
-
-# %%
-p_rest = (a = -1.0, b = 2.0, δ = 0.0)
-@show isGBMstable(p_rest, 0.1)
-@show isSETDEMstableforGBM(p_rest, 0.1)
-
-# %%
-fig, ax = figax(yscale = Makie.pseudolog10, xlabel = "t", ylabel = "Var[u(t)]")
-ax.limits = (nothing, nothing, -0.1, 2)
-for dt in [1.e-2, 1.e-1, 4.5e-1, 5.0e-1]
-    p = (; dt = dt, p_rest...)
-    dW = [SampledWeinerIncrement(p.dt, p.tmax) for _ in 1:p.nens]
-    sol = map(dWi -> solve(GBM(p), EulerMaruyama(p.dt), dWi, p.u0, p.tmax, p.dt), dW);
-    l = @sprintf "h=%.2f, Stable=%s" dt string(isEMstableforGBM(p, dt))
-    lines!(ax, sol[1].t, var([s.u for s in sol]), label = l)
-end
-t = 0.0:0.01:p_rest.tmax
-uvar = gbm_var.(p_rest.u0, p_rest.a, p_rest.b, t)
-lines!(ax, t, uvar, color = :black)
-axislegend(ax)
-fig
 
 # %%
 fig, ax = figax(yscale = Makie.pseudolog10, xlabel = "t", ylabel = "Var[u(t)]")
@@ -315,8 +292,8 @@ stability_region_plot!(ax, stability_Milstein, x, y, p, colors[2])
 for (ax, z) in zip(axis[2:end], [0.3, 0.5])
     p = (; a = -2.0, z = z)
     stability_region_plot!(ax, stability_GBM, x, y, p, :black; alpha = 0.05)
-    stability_region_plot!(ax, stability_SETDEM, x, y, p, colors[1]; label = "SETD EM")
-    stability_region_plot!(ax, stability_SETDMilstein, x, y, p, colors[2]; label = "SETD Milstein")
+    stability_region_plot!(ax, stability_SETDEM, x, y, p, colors[1]; label = "SETD-EM")
+    stability_region_plot!(ax, stability_SETDMilstein, x, y, p, colors[2]; label = "SETD-Milstein")
     stability_region_plot!(ax, stability_SETD1, x, y, p, colors[3]; label = "SETD1")
 end
 
@@ -329,8 +306,10 @@ e4 = PolyElement(; color = (colors[3], 0.05), strokecolor = (colors[3]), strokew
 kw = (; tellheight = false, tellwidth = false, halign = :right, valign = :top, patchsize = (35, 35), rowgap = 10, margin = (10, 10, 10, 10))
 
 Legend(fig[1, 1], [e1, e2, e3], ["Analytical", "EM", "Milstein"]; kw...)
-Legend(fig[1, 2], [e2, e3, e4], ["SETD EM", "SETD Milstein", "SETD1"], L"$c=0.3\lambda$"; kw...)
-Legend(fig[1, 3], [e2, e3, e4], ["SETD EM", "SETD Milstein", "SETD1"], L"$c=0.5\lambda$"; kw...)
+Legend(fig[1, 2], [e2, e3, e4], ["SETD-EM", "SETD-Milstein", "SETD1"], L"$c=0.3\lambda$"; kw...)
+Legend(fig[1, 3], [e2, e3, e4], ["SETD-EM", "SETD-Milstein", "SETD1"], L"$c=0.5\lambda$"; kw...)
 resize_to_layout!(fig)
 save("figs/GBM_stability.pdf", fig)
 fig
+
+# %%
