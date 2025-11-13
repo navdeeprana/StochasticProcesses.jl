@@ -28,7 +28,7 @@ Random.seed!(42);
 # # 1. Wiener Process (Brownian Motion)
 
 # %%
-tmax, Δt, nens = 1, 1.e-2, 2000
+tmax, Δt, nens = 1, 1.e-2, 1000
 t, df = brownian_motion(Δt, tmax, nens)
 show(df; allrows = false)
 
@@ -76,5 +76,3 @@ fig
 
 # %% [markdown]
 # ## HW : Find the analytical expression for the expected value of f(t, W)
-
-# %%

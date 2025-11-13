@@ -1,7 +1,7 @@
 # Create a makie theme for plotting.
 function makietheme()
-    return Theme(
-        fontsize = 25,
+    theme = Theme(
+        fontsize = 30,
         Axis = (
             backgroundcolor = :transparent,
             xgridvisible = false,
@@ -19,12 +19,13 @@ function makietheme()
         Lines = (linewidth = 3.0,),
         Scatter = (markersize = 20,)
     )
+    return merge(theme_latexfonts(), theme)
 end
 
 # Create a grid of axis to plot into.
-function figax(; nx = 1, ny = 1, h = 5, a = 1.6, s = 100, fontsize = 24, sharex = false, sharey = false, kwargs...)
+function figax(; nx = 1, ny = 1, h = 5, a = 1.6, s = 100, sharex = false, sharey = false, kwargs...)
     (a > 1) ? size = (a * s * h * nx, s * h * ny) : size = (s * h * nx, s * h * ny / a)
-    fig = Figure(; size = round.(Int, size), fontsize)
+    fig = Figure(; size = round.(Int, size))
     ax = [Axis(fig[j, i]; aspect = AxisAspect(a), kwargs...) for i in 1:nx, j in 1:ny]
     for i in 1:nx
         colsize!(fig.layout, i, Aspect(1, a))
@@ -39,18 +40,18 @@ function errorscatter!(ax, x, y, dy; kw...)
     errorbars!(ax, x, y, dy; color = p.color, whiskerwidth = 0.5*to_value(p.markersize)[1])
 end
 
+function plot_convergence(fig, ax1, ax2, cvg; ignore_es = false, kwargs...)
+    g = groupby(cvg, :t)[end]
+    (; h, es, ew) = g
+    kw = (markersize = 25, linestyle = :dash, linewidth = 3)
+    if !ignore_es
+        scatterlines!(ax1, h, es; kw..., kwargs...)
+    end
+    scatterlines!(ax2, h, ew; kw..., kwargs...)
+end
+
 # General power law
 power_law(x, x0, p, a) = @. a * (x / x0)^p
-
-function plot_convergence(fig, ax, cvg, ps, pw; f = minimum)
-    (; Δt, N, es, ew) = cvg
-    scatterlines!(ax, Δt, es, label = "Strong", markersize = 20, linestyle = :dash)
-    scatterlines!(ax, Δt, ew, label = "Weak", markersize = 20, linestyle = :dash)
-    lines!(ax, Δt, power_law(Δt, f(Δt), ps, f(es)), color = :black)
-    lines!(ax, Δt, power_law(Δt, f(Δt), pw, f(ew)), color = :red)
-    axislegend(ax, position = :rb)
-    ax.xlabel = "Δt"
-end
 
 plot_probability_distribution!(ax, X; bins = 256, kw...) = stephist!(ax, X; normalization = :pdf, bins, kw...)
 
